@@ -1,13 +1,28 @@
 import { StateGraph, START, END, Annotation, interrupt } from "@langchain/langgraph";
 import { MongoDBSaver } from "@langchain/langgraph-checkpoint-mongodb";
 import { ChatAnthropic } from "@langchain/anthropic";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { getMongoClient } from "./mongo.server";
 import { BriefFieldsSchema, type BriefFields } from "./brief.server";
 import {
   ClarificationVerdictSchema,
   type ClarificationVerdict,
 } from "./clarification.server";
-import { patchBrief, setRawInput } from "./sessions.server";
+import {
+  appendPreviewArtifact,
+  getSession,
+  patchBrief,
+  setRawInput,
+} from "./sessions.server";
+import {
+  PreviewSchema,
+  artifactUrl,
+  nextSequentialId,
+  type ArtifactRecord,
+  type Preview,
+  type PreviewRecord,
+} from "./preview.server";
 
 const GraphState = Annotation.Root({
   session_id: Annotation<string>(),
@@ -44,6 +59,21 @@ Rules:
 - Prefer ready over not-ready when the call is close. Iteration is cheap; the user can refine on preview review.
 
 Return a single verdict.`;
+
+const GENERATE_PREVIEWS_SYSTEM = `You design a single self-contained HTML page that realizes the user's brief.
+
+Output a complete HTML document:
+- Begins with <!doctype html> and includes <html>, <head>, and <body>.
+- All CSS is inlined in <style> tags. All JS (if any) is inlined in <script> tags.
+- No external assets, no external stylesheets, no external scripts, no <link rel="stylesheet">, no remote fonts.
+- The page should be visually finished enough that the user can react to it. Make real layout, real typography, real color choices.
+- Be honest about what the brief actually says. Do not invent product names, features, or claims that are not in the brief.
+
+Also return a short title and a few design_notes explaining the choices you made so the user can review them.`;
+
+function artifactsDir(): string {
+  return process.env.ARTIFACTS_DIR ?? "./artifacts";
+}
 
 async function ingestBrief(
   state: typeof GraphState.State,
@@ -126,24 +156,88 @@ function formatAnswers(answers: Record<string, string>): string {
 
 function clarifyDestination(
   state: typeof GraphState.State,
-): "ingest_brief" | typeof END {
-  return state.ready ? END : "ingest_brief";
+): "ingest_brief" | "generate_previews" {
+  return state.ready ? "generate_previews" : "ingest_brief";
+}
+
+async function generatePreviews(
+  state: typeof GraphState.State,
+): Promise<Partial<typeof GraphState.State>> {
+  const llm = new ChatAnthropic({
+    model: "claude-sonnet-4-5-20250929",
+    temperature: 0,
+    maxTokens: 16000,
+  }).withStructuredOutput(PreviewSchema);
+
+  const preview = (await llm.invoke([
+    { role: "system", content: GENERATE_PREVIEWS_SYSTEM },
+    {
+      role: "user",
+      content: [
+        `Brief to realize as a page:`,
+        ``,
+        `summary: ${state.summary}`,
+        `goals: ${JSON.stringify(state.goals)}`,
+        `constraints: ${JSON.stringify(state.constraints)}`,
+      ].join("\n"),
+    },
+  ])) as Preview;
+
+  const session = await getSession(state.session_id);
+  if (!session) {
+    throw new Error(`generate_previews: session ${state.session_id} not found`);
+  }
+
+  const artifact_id = nextSequentialId(
+    "artifact",
+    session.records.artifacts.length,
+  );
+  const preview_id = nextSequentialId(
+    "preview",
+    session.records.previews.length,
+  );
+
+  const dir = join(artifactsDir(), state.session_id);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, `${artifact_id}.html`), preview.html, "utf8");
+
+  const artifactRecord: ArtifactRecord = {
+    artifact_id,
+    type: "html_preview",
+    access: { url: artifactUrl(state.session_id, artifact_id) },
+  };
+  const previewRecord: PreviewRecord = {
+    preview_id,
+    artifact_id,
+  };
+
+  await appendPreviewArtifact(
+    state.session_id,
+    artifactRecord,
+    previewRecord,
+    "preview_ready",
+  );
+
+  return {};
 }
 
 function defineWorkflow() {
   const nodes = new StateGraph(GraphState)
     .addNode("ingest_brief", ingestBrief)
-    .addNode("clarify_or_confirm_brief", clarifyOrConfirmBrief);
+    .addNode("clarify_or_confirm_brief", clarifyOrConfirmBrief)
+    .addNode("generate_previews", generatePreviews);
 
   const briefingPhase = nodes
     .addEdge(START, "ingest_brief")
     .addEdge("ingest_brief", "clarify_or_confirm_brief")
     .addConditionalEdges("clarify_or_confirm_brief", clarifyDestination, [
       "ingest_brief",
-      END,
+      "generate_previews",
     ]);
 
-  return briefingPhase;
+  const previewPhase = briefingPhase.addEdge("generate_previews", END);
+
+  return previewPhase;
 }
 
 let compiledPromise: ReturnType<typeof buildGraph> | null = null;

@@ -1,10 +1,18 @@
 import { randomBytes } from "node:crypto";
 import { getDb } from "./mongo.server";
+import type { ArtifactRecord, PreviewRecord } from "./preview.server";
 
 // Schema lock: gigi/wiki/decisions/v1-session-document.md
+export type SessionStage =
+  | "briefing"
+  | "designing"
+  | "preview_ready"
+  | "revising"
+  | "published";
+
 export type Session = {
   session_id: string;
-  stage: "briefing" | "designing" | "preview_ready" | "revising" | "published";
+  stage: SessionStage;
   brief: {
     raw_input: string;
     summary: string;
@@ -13,9 +21,9 @@ export type Session = {
     open_questions: string[];
   };
   records: {
-    previews: unknown[];
+    previews: PreviewRecord[];
     reviews: unknown[];
-    artifacts: unknown[];
+    artifacts: ArtifactRecord[];
   };
 };
 
@@ -110,6 +118,25 @@ export async function patchBrief(
         "brief.goals": patch.goals,
         "brief.constraints": patch.constraints,
         "brief.open_questions": patch.open_questions,
+      },
+    },
+  );
+}
+
+export async function appendPreviewArtifact(
+  session_id: string,
+  artifact: ArtifactRecord,
+  preview: PreviewRecord,
+  stage: SessionStage,
+): Promise<void> {
+  const db = await getDb();
+  await db.collection<Session>(SESSIONS).updateOne(
+    { session_id },
+    {
+      $set: { stage },
+      $push: {
+        "records.artifacts": artifact,
+        "records.previews": preview,
       },
     },
   );
