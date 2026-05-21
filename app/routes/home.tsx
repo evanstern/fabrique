@@ -3,15 +3,22 @@ import type { Route } from "./+types/home";
 import { createSession, setRawInput } from "../lib/sessions.server";
 import { getGraph } from "../lib/graph.server";
 import { publishSnapshot } from "../lib/sse-hub.server";
+import { requireAuth } from "../lib/auth.server";
 
-export function meta({}: Route.MetaArgs) {
+export function meta(_args: Route.MetaArgs) {
   return [
     { title: "fabrique" },
     { name: "description", content: "A workshop for making web pages." },
   ];
 }
 
+export async function loader({ request }: Route.LoaderArgs) {
+  requireAuth(request);
+  return null;
+}
+
 export async function action({ request }: Route.ActionArgs) {
+  requireAuth(request);
   const form = await request.formData();
   const raw_input = String(form.get("raw_input") ?? "").trim();
   if (raw_input === "") {
@@ -38,6 +45,16 @@ export default function Home({ actionData }: Route.ComponentProps) {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <div className="max-w-xl w-full space-y-6">
+        <div className="flex justify-end">
+          <form action="/logout" method="post">
+            <button
+              type="submit"
+              className="text-xs text-gray-500 underline"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
         <header className="space-y-2">
           <h1 className="text-4xl font-light tracking-tight">fabrique</h1>
           <p className="text-gray-600 dark:text-gray-400">

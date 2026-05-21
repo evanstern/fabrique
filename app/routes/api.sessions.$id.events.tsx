@@ -7,8 +7,10 @@ import {
   ReviewPreviewEventSchema,
   type ReviewPreviewEvent,
 } from "../lib/preview.server";
+import { requireAuth } from "../lib/auth.server";
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  requireAuth(request, { api: true });
   return Response.json({ error: "method not allowed" }, { status: 405 });
 }
 
@@ -61,6 +63,7 @@ function parseEvent(value: unknown): InputEvent | null {
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
+  requireAuth(request, { api: true });
   if (request.method !== "POST") {
     return Response.json({ error: "method not allowed" }, { status: 405 });
   }

@@ -2,12 +2,14 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Route } from "./+types/artifacts.$session_id.$artifact_id";
 import { getSession } from "../lib/sessions.server";
+import { requireAuth } from "../lib/auth.server";
 
 function artifactsDir(): string {
   return process.env.ARTIFACTS_DIR ?? "./artifacts";
 }
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
+  requireAuth(request, { api: true });
   const { session_id, artifact_id } = params;
 
   const session = await getSession(session_id);

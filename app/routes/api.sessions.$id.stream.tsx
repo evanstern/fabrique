@@ -1,6 +1,7 @@
 import type { Route } from "./+types/api.sessions.$id.stream";
 import { buildSnapshot, type SessionSnapshot } from "../lib/snapshots.server";
 import { subscribe } from "../lib/sse-hub.server";
+import { requireAuth } from "../lib/auth.server";
 
 const HEARTBEAT_MS = 20_000;
 
@@ -9,6 +10,7 @@ function encodeSnapshot(snapshot: SessionSnapshot): string {
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {
+  requireAuth(request, { api: true });
   const initial = await buildSnapshot(params.id);
   if (!initial) {
     return Response.json({ error: "session not found" }, { status: 404 });
