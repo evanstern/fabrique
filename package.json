@@ -9,10 +9,12 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
+    "@langchain/langgraph": "^1.3.2",
+    "@langchain/langgraph-checkpoint-mongodb": "^1.3.1",
     "@react-router/node": "7.15.1",
     "@react-router/serve": "7.15.1",
     "isbot": "^5.1.36",
-    "mongodb": "^7.2.0",
+    "mongodb": "^6.21.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router": "7.15.1"
