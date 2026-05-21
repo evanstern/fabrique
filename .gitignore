@@ -33,10 +33,13 @@ build/
 *.log
 logs/
 
-# Runtime artifacts (per-session previews, scratch)
+# Runtime artifacts (per-session previews, scratch).
+# The artifacts/ directory itself is committed (as a bind-mount target);
+# only its contents are ignored.
 /tmp/
 /data/
-artifacts/
+/artifacts/*
+!/artifacts/.gitkeep
 
 # TypeScript
 *.tsbuildinfo
