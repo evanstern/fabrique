@@ -1,0 +1,39 @@
+# Node / pnpm / npm
+node_modules/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+.cache/
+.output/
+.vite/
+.turbo/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Runtime artifacts (per-session previews, scratch)
+/tmp/
+/data/
+artifacts/
+
+# TypeScript
+*.tsbuildinfo
