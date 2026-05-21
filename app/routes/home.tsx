@@ -1,4 +1,8 @@
+import { redirect, Form, useNavigation } from "react-router";
 import type { Route } from "./+types/home";
+import { createSession, setRawInput } from "../lib/sessions.server";
+import { getGraph } from "../lib/graph.server";
+import { publishSnapshot } from "../lib/sse-hub.server";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -7,14 +11,61 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export default function Home() {
+export async function action({ request }: Route.ActionArgs) {
+  const form = await request.formData();
+  const raw_input = String(form.get("raw_input") ?? "").trim();
+  if (raw_input === "") {
+    return { error: "Please describe the page you want to make." };
+  }
+
+  const session = await createSession();
+  await setRawInput(session.session_id, raw_input);
+
+  const graph = await getGraph();
+  await graph.invoke(
+    { session_id: session.session_id, raw_input },
+    { configurable: { thread_id: session.session_id } },
+  );
+  await publishSnapshot(session.session_id);
+
+  return redirect(`/s/${session.session_id}`);
+}
+
+export default function Home({ actionData }: Route.ComponentProps) {
+  const navigation = useNavigation();
+  const submitting = navigation.state === "submitting";
+
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="max-w-xl text-center space-y-4">
-        <h1 className="text-4xl font-light tracking-tight">fabrique</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          A workshop for making web pages. Coming soon.
-        </p>
+    <main className="min-h-screen flex items-center justify-center px-6 py-12">
+      <div className="max-w-xl w-full space-y-6">
+        <header className="space-y-2">
+          <h1 className="text-4xl font-light tracking-tight">fabrique</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Describe the page you want to make. We&apos;ll ask if anything
+            isn&apos;t clear.
+          </p>
+        </header>
+
+        <Form method="post" className="space-y-4">
+          <textarea
+            name="raw_input"
+            rows={6}
+            required
+            placeholder="A landing page for my friend's bakery in Brooklyn..."
+            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 text-base font-normal focus:outline-none focus:ring-2 focus:ring-gray-400"
+            disabled={submitting}
+          />
+          {actionData?.error ? (
+            <p className="text-sm text-red-600">{actionData.error}</p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-md bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {submitting ? "Working..." : "Start"}
+          </button>
+        </Form>
       </div>
     </main>
   );
