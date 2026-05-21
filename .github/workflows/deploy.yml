@@ -37,13 +37,17 @@ jobs:
 
       - name: Verify live site
         run: |
+          # Probe /login (the only public route post-auth). Card #21
+          # made `/` 302 → /login for unauthenticated requests, so
+          # probing `/` would now require following redirects or
+          # carrying a cookie. /login itself stays 200 forever.
           for i in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:8422/ | grep -q '^200$'; then
+            if curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:8422/login | grep -q '^200$'; then
               echo "Live site healthy after $i attempt(s)"
               exit 0
             fi
             sleep 2
           done
-          echo "Live site did not return 200 within 20s" >&2
+          echo "Live site /login did not return 200 within 20s" >&2
           docker ps --filter name=fabrique --format '{{.Names}} {{.Image}} {{.Status}}'
           exit 1

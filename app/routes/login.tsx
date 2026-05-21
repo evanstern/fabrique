@@ -45,21 +45,41 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Login({ loaderData }: Route.ComponentProps) {
   const { error, next } = loaderData;
   return (
-    <main className="login-main">
-      <div className="login-card">
-        <h1>fabrique</h1>
-        <p>Sign in to continue.</p>
-        <form method="post">
+    <main className="min-h-screen flex items-center justify-center px-4 py-12 bg-white dark:bg-gray-950">
+      <div className="w-full max-w-sm space-y-6 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8">
+        <div className="space-y-1 text-center">
+          <h1 className="text-4xl font-light tracking-tight">fabrique</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Sign in to continue.
+          </p>
+        </div>
+        <form method="post" className="space-y-4">
           <input type="hidden" name="next" value={next} />
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-          />
-          {error ? <p className="login-error">Wrong password.</p> : null}
-          <button type="submit">Sign in</button>
+          <div className="space-y-1">
+            <label
+              htmlFor="password"
+              className="block text-xs uppercase tracking-wider font-medium text-gray-500 dark:text-gray-400"
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autoFocus
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400"
+            />
+          </div>
+          {error ? (
+            <p className="text-sm text-red-600">Wrong password.</p>
+          ) : null}
+          <button
+            type="submit"
+            className="w-full rounded-md bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 font-medium disabled:opacity-50"
+          >
+            Sign in
+          </button>
         </form>
       </div>
     </main>
