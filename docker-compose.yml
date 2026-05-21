@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fabrique
+    restart: unless-stopped
+    ports:
+      - "8422:3000"
+    environment:
+      NODE_ENV: production
