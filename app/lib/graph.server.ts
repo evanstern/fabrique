@@ -124,8 +124,26 @@ function formatAnswers(answers: Record<string, string>): string {
   return lines.join("\n").trimEnd();
 }
 
-function routeAfterClarify(state: typeof GraphState.State): "ingest_brief" | typeof END {
+function clarifyDestination(
+  state: typeof GraphState.State,
+): "ingest_brief" | typeof END {
   return state.ready ? END : "ingest_brief";
+}
+
+function defineWorkflow() {
+  const nodes = new StateGraph(GraphState)
+    .addNode("ingest_brief", ingestBrief)
+    .addNode("clarify_or_confirm_brief", clarifyOrConfirmBrief);
+
+  const briefingPhase = nodes
+    .addEdge(START, "ingest_brief")
+    .addEdge("ingest_brief", "clarify_or_confirm_brief")
+    .addConditionalEdges("clarify_or_confirm_brief", clarifyDestination, [
+      "ingest_brief",
+      END,
+    ]);
+
+  return briefingPhase;
 }
 
 let compiledPromise: ReturnType<typeof buildGraph> | null = null;
@@ -133,18 +151,7 @@ let compiledPromise: ReturnType<typeof buildGraph> | null = null;
 async function buildGraph() {
   const client = await getMongoClient();
   const checkpointer = new MongoDBSaver({ client });
-
-  const workflow = new StateGraph(GraphState)
-    .addNode("ingest_brief", ingestBrief)
-    .addNode("clarify_or_confirm_brief", clarifyOrConfirmBrief)
-    .addEdge(START, "ingest_brief")
-    .addEdge("ingest_brief", "clarify_or_confirm_brief")
-    .addConditionalEdges("clarify_or_confirm_brief", routeAfterClarify, [
-      "ingest_brief",
-      END,
-    ]);
-
-  return workflow.compile({ checkpointer });
+  return defineWorkflow().compile({ checkpointer });
 }
 
 export async function getGraph() {
