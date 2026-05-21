@@ -1,5 +1,23 @@
 import { z } from "zod";
 
+export const ReviewPreviewEventSchema = z.object({
+  type: z.literal("review_preview"),
+  target_preview_id: z.string().min(1),
+  action: z.enum(["approve", "revise"]),
+  notes: z.array(z.string()),
+});
+
+export type ReviewPreviewEvent = z.infer<typeof ReviewPreviewEventSchema>;
+
+// Schema lock: gigi/wiki/decisions/v1-artifact-and-preview-records.md
+export type ReviewRecord = {
+  review_id: string;
+  target_preview_id: string;
+  action: "approve" | "revise";
+  notes: string[];
+  created_at: Date;
+};
+
 export const PreviewSchema = z.object({
   html: z
     .string()

@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { getDb } from "./mongo.server";
-import type { ArtifactRecord, PreviewRecord } from "./preview.server";
+import type {
+  ArtifactRecord,
+  PreviewRecord,
+  ReviewRecord,
+} from "./preview.server";
 
 // Schema lock: gigi/wiki/decisions/v1-session-document.md
 export type SessionStage =
@@ -22,7 +26,7 @@ export type Session = {
   };
   records: {
     previews: PreviewRecord[];
-    reviews: unknown[];
+    reviews: ReviewRecord[];
     artifacts: ArtifactRecord[];
   };
 };
@@ -138,6 +142,19 @@ export async function appendPreviewArtifact(
         "records.artifacts": artifact,
         "records.previews": preview,
       },
+    },
+  );
+}
+
+export async function appendReview(
+  session_id: string,
+  review: ReviewRecord,
+): Promise<void> {
+  const db = await getDb();
+  await db.collection<Session>(SESSIONS).updateOne(
+    { session_id },
+    {
+      $push: { "records.reviews": review },
     },
   );
 }

@@ -3,6 +3,10 @@ import type { Route } from "./+types/api.sessions.$id.events";
 import { getSession, setRawInput } from "../lib/sessions.server";
 import { getGraph, getPendingInterrupt } from "../lib/graph.server";
 import { publishSnapshot } from "../lib/sse-hub.server";
+import {
+  ReviewPreviewEventSchema,
+  type ReviewPreviewEvent,
+} from "../lib/preview.server";
 
 export async function loader() {
   return Response.json({ error: "method not allowed" }, { status: 405 });
@@ -18,7 +22,10 @@ type AnswerClarificationEvent = {
   answers: Record<string, string>;
 };
 
-type InputEvent = SubmitBriefEvent | AnswerClarificationEvent;
+type InputEvent =
+  | SubmitBriefEvent
+  | AnswerClarificationEvent
+  | ReviewPreviewEvent;
 
 function isSubmitBrief(value: unknown): value is SubmitBriefEvent {
   if (typeof value !== "object" || value === null) return false;
@@ -42,6 +49,14 @@ function isAnswerClarification(
 function parseEvent(value: unknown): InputEvent | null {
   if (isSubmitBrief(value)) return value;
   if (isAnswerClarification(value)) return value;
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { type?: unknown }).type === "review_preview"
+  ) {
+    const parsed = ReviewPreviewEventSchema.safeParse(value);
+    if (parsed.success) return parsed.data;
+  }
   return null;
 }
 
@@ -117,6 +132,49 @@ export async function action({ request, params }: Route.ActionArgs) {
 
     const graph = await getGraph();
     await graph.invoke(new Command({ resume: event.answers }), {
+      configurable: { thread_id: session.session_id },
+    });
+
+    await publishSnapshot(session.session_id);
+    return new Response(null, { status: 202 });
+  }
+
+  if (event.type === "review_preview") {
+    if (session.stage !== "preview_ready") {
+      return Response.json(
+        { error: `cannot review_preview in stage '${session.stage}'` },
+        { status: 409 },
+      );
+    }
+
+    const previewExists = session.records.previews.some(
+      (p) => p.preview_id === event.target_preview_id,
+    );
+    if (!previewExists) {
+      return Response.json(
+        { error: `unknown target_preview_id '${event.target_preview_id}'` },
+        { status: 400 },
+      );
+    }
+
+    const pending = await getPendingInterrupt(session.session_id);
+    if (!pending || pending.kind !== "review_preview") {
+      return Response.json(
+        { error: "no pending review interrupt" },
+        { status: 409 },
+      );
+    }
+    if (pending.target_preview_id !== event.target_preview_id) {
+      return Response.json(
+        {
+          error: `target_preview_id mismatch: interrupt is paused on '${pending.target_preview_id}'`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const graph = await getGraph();
+    await graph.invoke(new Command({ resume: event }), {
       configurable: { thread_id: session.session_id },
     });
 
