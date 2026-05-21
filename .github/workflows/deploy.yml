@@ -1,0 +1,49 @@
+name: Deploy to fabrique.infinitynode.ai
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, fabrique-host]
+    timeout-minutes: 15
+
+    # Run in the long-lived main worktree on the host, NOT in the
+    # runner's checkout dir. That worktree owns the .env file with
+    # MONGO_URL + ANTHROPIC_API_KEY and the live artifacts/ volume.
+    defaults:
+      run:
+        working-directory: /home/coda/projects/fabrique/main
+
+    steps:
+      - name: Sync main worktree
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+          git log -1 --oneline
+
+      - name: Build + swap container
+        run: |
+          # `up -d --build` only replaces the running container if
+          # the new image builds successfully. On build failure the
+          # old container keeps serving.
+          docker compose up -d --build
+
+      - name: Verify live site
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:8422/ | grep -q '^200$'; then
+              echo "Live site healthy after $i attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Live site did not return 200 within 20s" >&2
+          docker ps --filter name=fabrique --format '{{.Names}} {{.Image}} {{.Status}}'
+          exit 1
