@@ -2,6 +2,7 @@ import { Command } from "@langchain/langgraph";
 import type { Route } from "./+types/api.sessions.$id.events";
 import { getSession, setRawInput } from "../lib/sessions.server";
 import { getGraph, getPendingInterrupt } from "../lib/graph.server";
+import { publishSnapshot } from "../lib/sse-hub.server";
 
 export async function loader() {
   return Response.json({ error: "method not allowed" }, { status: 405 });
@@ -94,6 +95,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       { configurable: { thread_id: session.session_id } },
     );
 
+    await publishSnapshot(session.session_id);
     return new Response(null, { status: 202 });
   }
 
@@ -118,6 +120,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       configurable: { thread_id: session.session_id },
     });
 
+    await publishSnapshot(session.session_id);
     return new Response(null, { status: 202 });
   }
 
