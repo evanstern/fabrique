@@ -6,6 +6,11 @@ services:
     container_name: fabrique
     restart: unless-stopped
     ports:
-      - "8422:3000"
+      - "${APP_HOST_PORT:-8422}:3000"
     environment:
       NODE_ENV: production
+      MONGO_URL: ${MONGO_URL:?MONGO_URL is required (see .env.example)}
+      ARTIFACTS_DIR: /app/artifacts
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8422}
+    volumes:
+      - ./artifacts:/app/artifacts
