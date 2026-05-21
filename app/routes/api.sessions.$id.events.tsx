@@ -1,6 +1,7 @@
+import { Command } from "@langchain/langgraph";
 import type { Route } from "./+types/api.sessions.$id.events";
 import { getSession, setRawInput } from "../lib/sessions.server";
-import { getGraph } from "../lib/graph.server";
+import { getGraph, getPendingInterrupt } from "../lib/graph.server";
 
 export async function loader() {
   return Response.json({ error: "method not allowed" }, { status: 405 });
@@ -11,7 +12,12 @@ type SubmitBriefEvent = {
   raw_input: string;
 };
 
-type InputEvent = SubmitBriefEvent;
+type AnswerClarificationEvent = {
+  type: "answer_clarification";
+  answers: Record<string, string>;
+};
+
+type InputEvent = SubmitBriefEvent | AnswerClarificationEvent;
 
 function isSubmitBrief(value: unknown): value is SubmitBriefEvent {
   if (typeof value !== "object" || value === null) return false;
@@ -19,8 +25,22 @@ function isSubmitBrief(value: unknown): value is SubmitBriefEvent {
   return v.type === "submit_brief" && typeof v.raw_input === "string";
 }
 
+function isAnswerClarification(
+  value: unknown,
+): value is AnswerClarificationEvent {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  if (v.type !== "answer_clarification") return false;
+  if (typeof v.answers !== "object" || v.answers === null) return false;
+  for (const val of Object.values(v.answers as Record<string, unknown>)) {
+    if (typeof val !== "string") return false;
+  }
+  return true;
+}
+
 function parseEvent(value: unknown): InputEvent | null {
   if (isSubmitBrief(value)) return value;
+  if (isAnswerClarification(value)) return value;
   return null;
 }
 
@@ -73,6 +93,30 @@ export async function action({ request, params }: Route.ActionArgs) {
       { session_id: session.session_id, raw_input: event.raw_input },
       { configurable: { thread_id: session.session_id } },
     );
+
+    return new Response(null, { status: 202 });
+  }
+
+  if (event.type === "answer_clarification") {
+    if (session.stage !== "briefing") {
+      return Response.json(
+        { error: `cannot answer_clarification in stage '${session.stage}'` },
+        { status: 409 },
+      );
+    }
+
+    const pending = await getPendingInterrupt(session.session_id);
+    if (!pending || pending.kind !== "answer_clarification") {
+      return Response.json(
+        { error: "no pending clarification interrupt" },
+        { status: 409 },
+      );
+    }
+
+    const graph = await getGraph();
+    await graph.invoke(new Command({ resume: event.answers }), {
+      configurable: { thread_id: session.session_id },
+    });
 
     return new Response(null, { status: 202 });
   }
