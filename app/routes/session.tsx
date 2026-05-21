@@ -30,26 +30,55 @@ export async function action({ request, params }: Route.ActionArgs) {
     throw new Response("session not found", { status: 404 });
   }
   const pending = await getPendingInterrupt(params.id);
-  if (!pending || pending.kind !== "answer_clarification") {
-    return { error: "No clarification questions are pending right now." };
+  if (!pending) {
+    return { error: "Nothing is pending input right now." };
   }
 
   const form = await request.formData();
-  const answers: Record<string, string> = {};
-  for (const q of pending.questions) {
-    const v = String(form.get(q) ?? "").trim();
-    if (v !== "") answers[q] = v;
-  }
-  if (Object.keys(answers).length === 0) {
-    return { error: "Please answer at least one question." };
+  const graph = await getGraph();
+
+  if (pending.kind === "answer_clarification") {
+    const answers: Record<string, string> = {};
+    for (const q of pending.questions) {
+      const v = String(form.get(q) ?? "").trim();
+      if (v !== "") answers[q] = v;
+    }
+    if (Object.keys(answers).length === 0) {
+      return { error: "Please answer at least one question." };
+    }
+    await graph.invoke(new Command({ resume: answers }), {
+      configurable: { thread_id: params.id },
+    });
+    await publishSnapshot(params.id);
+    return { ok: true };
   }
 
-  const graph = await getGraph();
-  await graph.invoke(new Command({ resume: answers }), {
-    configurable: { thread_id: params.id },
-  });
-  await publishSnapshot(params.id);
-  return { ok: true };
+  if (pending.kind === "review_preview") {
+    const action = String(form.get("action") ?? "");
+    if (action !== "approve" && action !== "revise") {
+      return { error: "Pick Approve or Revise." };
+    }
+    const notes = String(form.get("notes") ?? "")
+      .split("\n")
+      .map((s) => s.trim())
+      .filter((s) => s !== "");
+
+    await graph.invoke(
+      new Command({
+        resume: {
+          type: "review_preview",
+          target_preview_id: pending.target_preview_id,
+          action,
+          notes,
+        },
+      }),
+      { configurable: { thread_id: params.id } },
+    );
+    await publishSnapshot(params.id);
+    return { ok: true };
+  }
+
+  return { error: "Unhandled pending interrupt." };
 }
 
 type LiveState = {
@@ -101,15 +130,31 @@ export default function SessionPage({
 
         <Brief session={session} />
 
-        {live.interrupt ? (
+        {live.interrupt && live.interrupt.kind === "answer_clarification" ? (
           <Clarification
             questions={live.interrupt.questions}
             submitting={submitting}
             error={actionData && "error" in actionData ? actionData.error : null}
           />
-        ) : (
+        ) : null}
+
+        {live.stage === "preview_ready" &&
+        live.interrupt &&
+        live.interrupt.kind === "review_preview" ? (
+          <PreviewReview
+            sessionId={session.session_id}
+            targetPreviewId={live.interrupt.target_preview_id}
+            artifactId={
+              session.records.previews.at(-1)?.artifact_id ?? null
+            }
+            submitting={submitting}
+            error={actionData && "error" in actionData ? actionData.error : null}
+          />
+        ) : null}
+
+        {!live.interrupt && live.stage === "briefing" ? (
           <ReadyForDesign />
-        )}
+        ) : null}
       </div>
     </main>
   );
@@ -187,6 +232,86 @@ function Clarification({
         >
           {submitting ? "Sending..." : "Send answers"}
         </button>
+      </Form>
+    </section>
+  );
+}
+
+function PreviewReview({
+  sessionId,
+  targetPreviewId,
+  artifactId,
+  submitting,
+  error,
+}: {
+  sessionId: string;
+  targetPreviewId: string;
+  artifactId: string | null;
+  submitting: boolean;
+  error: string | null | undefined;
+}) {
+  const url = artifactId ? `/artifacts/${sessionId}/${artifactId}` : null;
+  return (
+    <section className="space-y-4 rounded-md border border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-950/30 p-4">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm uppercase tracking-wider text-sky-800 dark:text-sky-300">
+          Review preview {targetPreviewId}
+        </h2>
+        {url ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs underline text-sky-800 dark:text-sky-300"
+          >
+            Open in new tab
+          </a>
+        ) : null}
+      </div>
+      {url ? (
+        <iframe
+          src={url}
+          sandbox=""
+          title={`preview ${targetPreviewId}`}
+          className="w-full h-[600px] rounded border border-gray-300 dark:border-gray-700 bg-white"
+        />
+      ) : (
+        <p className="text-sm text-gray-500 italic">No artifact attached.</p>
+      )}
+      <Form method="post" className="space-y-3">
+        <div className="space-y-1">
+          <label htmlFor="notes" className="block text-sm font-medium">
+            Notes (one per line)
+          </label>
+          <textarea
+            id="notes"
+            name="notes"
+            rows={4}
+            disabled={submitting}
+            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+          />
+        </div>
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            name="action"
+            value="revise"
+            disabled={submitting}
+            className="rounded-md bg-amber-700 text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {submitting ? "Sending..." : "Revise"}
+          </button>
+          <button
+            type="submit"
+            name="action"
+            value="approve"
+            disabled={submitting}
+            className="rounded-md bg-emerald-700 text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {submitting ? "Sending..." : "Approve"}
+          </button>
+        </div>
       </Form>
     </section>
   );

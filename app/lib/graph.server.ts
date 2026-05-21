@@ -11,6 +11,7 @@ import {
 } from "./clarification.server";
 import {
   appendPreviewArtifact,
+  appendReview,
   getSession,
   patchBrief,
   setRawInput,
@@ -22,6 +23,8 @@ import {
   type ArtifactRecord,
   type Preview,
   type PreviewRecord,
+  type ReviewPreviewEvent,
+  type ReviewRecord,
 } from "./preview.server";
 
 const GraphState = Annotation.Root({
@@ -221,11 +224,49 @@ async function generatePreviews(
   return {};
 }
 
+async function requestPreviewDecision(
+  state: typeof GraphState.State,
+): Promise<Partial<typeof GraphState.State>> {
+  const session = await getSession(state.session_id);
+  if (!session) {
+    throw new Error(
+      `request_preview_decision: session ${state.session_id} not found`,
+    );
+  }
+  const latest = session.records.previews.at(-1);
+  if (!latest) {
+    throw new Error(
+      `request_preview_decision: no preview to review on session ${state.session_id}`,
+    );
+  }
+
+  const review = interrupt({
+    kind: "review_preview",
+    target_preview_id: latest.preview_id,
+  }) as ReviewPreviewEvent;
+
+  const review_id = nextSequentialId(
+    "review",
+    session.records.reviews.length,
+  );
+  const record: ReviewRecord = {
+    review_id,
+    target_preview_id: review.target_preview_id,
+    action: review.action,
+    notes: review.notes,
+    created_at: new Date(),
+  };
+  await appendReview(state.session_id, record);
+
+  return {};
+}
+
 function defineWorkflow() {
   const nodes = new StateGraph(GraphState)
     .addNode("ingest_brief", ingestBrief)
     .addNode("clarify_or_confirm_brief", clarifyOrConfirmBrief)
-    .addNode("generate_previews", generatePreviews);
+    .addNode("generate_previews", generatePreviews)
+    .addNode("request_preview_decision", requestPreviewDecision);
 
   const briefingPhase = nodes
     .addEdge(START, "ingest_brief")
@@ -235,9 +276,14 @@ function defineWorkflow() {
       "generate_previews",
     ]);
 
-  const previewPhase = briefingPhase.addEdge("generate_previews", END);
+  const previewPhase = briefingPhase.addEdge(
+    "generate_previews",
+    "request_preview_decision",
+  );
 
-  return previewPhase;
+  const reviewPhase = previewPhase.addEdge("request_preview_decision", END);
+
+  return reviewPhase;
 }
 
 let compiledPromise: ReturnType<typeof buildGraph> | null = null;
@@ -255,10 +301,9 @@ export async function getGraph() {
   return compiledPromise;
 }
 
-export type PendingInterrupt = {
-  kind: "answer_clarification";
-  questions: string[];
-};
+export type PendingInterrupt =
+  | { kind: "answer_clarification"; questions: string[] }
+  | { kind: "review_preview"; target_preview_id: string };
 
 export async function getPendingInterrupt(
   session_id: string,
@@ -269,7 +314,11 @@ export async function getPendingInterrupt(
   });
   for (const task of state.tasks) {
     for (const intr of task.interrupts ?? []) {
-      const val = intr.value as { kind?: string; questions?: unknown };
+      const val = intr.value as {
+        kind?: string;
+        questions?: unknown;
+        target_preview_id?: unknown;
+      };
       if (
         val &&
         val.kind === "answer_clarification" &&
@@ -280,6 +329,16 @@ export async function getPendingInterrupt(
           questions: val.questions.filter(
             (q): q is string => typeof q === "string",
           ),
+        };
+      }
+      if (
+        val &&
+        val.kind === "review_preview" &&
+        typeof val.target_preview_id === "string"
+      ) {
+        return {
+          kind: "review_preview",
+          target_preview_id: val.target_preview_id,
         };
       }
     }
