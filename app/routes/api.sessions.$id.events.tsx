@@ -82,6 +82,13 @@ export async function action({ request, params }: Route.ActionArgs) {
     return Response.json({ error: "session not found" }, { status: 404 });
   }
 
+  if (session.stage === "published") {
+    return Response.json(
+      { error: "session is published; no further events accepted" },
+      { status: 409 },
+    );
+  }
+
   if (event.type === "submit_brief") {
     if (session.stage !== "briefing") {
       return Response.json(
