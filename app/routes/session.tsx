@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Form, useNavigation } from "react-router";
 import type { Route } from "./+types/session";
 import { Command } from "@langchain/langgraph";
-import { getSession } from "../lib/sessions.server";
+import { getPublishedPreview, getSession } from "../lib/sessions.server";
 import {
   getGraph,
   getPendingInterrupt,
@@ -21,7 +21,8 @@ export async function loader({ params }: Route.LoaderArgs) {
     throw new Response("session not found", { status: 404 });
   }
   const interrupt = await getPendingInterrupt(params.id);
-  return { session, interrupt };
+  const published = getPublishedPreview(session);
+  return { session, interrupt, published };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -90,7 +91,7 @@ export default function SessionPage({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const { session, interrupt: initialInterrupt } = loaderData;
+  const { session, interrupt: initialInterrupt, published } = loaderData;
   const navigation = useNavigation();
   const submitting = navigation.state === "submitting";
 
@@ -138,7 +139,15 @@ export default function SessionPage({
           />
         ) : null}
 
-        {live.stage === "preview_ready" &&
+        {live.stage === "published" && published ? (
+          <Published
+            sessionId={session.session_id}
+            artifactUrl={published.artifact.access.url}
+          />
+        ) : null}
+
+        {live.stage !== "published" &&
+        live.stage === "preview_ready" &&
         live.interrupt &&
         live.interrupt.kind === "review_preview" ? (
           <PreviewReview
@@ -157,6 +166,36 @@ export default function SessionPage({
         ) : null}
       </div>
     </main>
+  );
+}
+
+function Published({
+  sessionId,
+  artifactUrl,
+}: {
+  sessionId: string;
+  artifactUrl: string;
+}) {
+  return (
+    <section className="space-y-3 rounded-md border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 p-4">
+      <h2 className="text-sm uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+        Published
+      </h2>
+      <p className="text-base break-all font-mono">{artifactUrl}</p>
+      <a
+        href={artifactUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-block rounded-md bg-emerald-700 text-white px-4 py-2 text-sm font-medium"
+      >
+        View in new tab
+      </a>
+      <p className="text-xs text-gray-600 dark:text-gray-400">
+        The artifact URL above is the shareable page. This{" "}
+        <span className="font-mono">/s/{sessionId}</span> URL shows the workflow
+        that produced it.
+      </p>
+    </section>
   );
 }
 

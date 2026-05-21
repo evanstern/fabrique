@@ -15,6 +15,7 @@ import {
   getSession,
   patchBrief,
   setRawInput,
+  setStage,
 } from "./sessions.server";
 import {
   PreviewSchema,
@@ -377,10 +378,19 @@ async function applyRevision(
   return {};
 }
 
+async function publishSelectedPreview(
+  state: typeof GraphState.State,
+): Promise<Partial<typeof GraphState.State>> {
+  await setStage(state.session_id, "published");
+  return {};
+}
+
 function reviewDestination(
   state: typeof GraphState.State,
-): "apply_revision" | typeof END {
-  return state.last_review_action === "revise" ? "apply_revision" : END;
+): "apply_revision" | "publish_selected_preview" {
+  return state.last_review_action === "revise"
+    ? "apply_revision"
+    : "publish_selected_preview";
 }
 
 function defineWorkflow() {
@@ -389,7 +399,8 @@ function defineWorkflow() {
     .addNode("clarify_or_confirm_brief", clarifyOrConfirmBrief)
     .addNode("generate_previews", generatePreviews)
     .addNode("request_preview_decision", requestPreviewDecision)
-    .addNode("apply_revision", applyRevision);
+    .addNode("apply_revision", applyRevision)
+    .addNode("publish_selected_preview", publishSelectedPreview);
 
   const briefingPhase = nodes
     .addEdge(START, "ingest_brief")
@@ -407,7 +418,7 @@ function defineWorkflow() {
   const reviewPhase = previewPhase.addConditionalEdges(
     "request_preview_decision",
     reviewDestination,
-    ["apply_revision", END],
+    ["apply_revision", "publish_selected_preview"],
   );
 
   const revisionPhase = reviewPhase.addEdge(
@@ -415,7 +426,12 @@ function defineWorkflow() {
     "request_preview_decision",
   );
 
-  return revisionPhase;
+  const publishPhase = revisionPhase.addEdge(
+    "publish_selected_preview",
+    END,
+  );
+
+  return publishPhase;
 }
 
 let compiledPromise: ReturnType<typeof buildGraph> | null = null;

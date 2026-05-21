@@ -158,3 +158,38 @@ export async function appendReview(
     },
   );
 }
+
+export async function setStage(
+  session_id: string,
+  stage: SessionStage,
+): Promise<void> {
+  const db = await getDb();
+  await db
+    .collection<Session>(SESSIONS)
+    .updateOne({ session_id }, { $set: { stage } });
+}
+
+// Schema lock: gigi/wiki/decisions/v1-preview-publish-semantics.md
+// No `published_preview_id` field on the session document. Published state
+// is derived from the latest `action === 'approve'` review record.
+export function getPublishedPreview(
+  session: Session,
+): { preview: PreviewRecord; artifact: ArtifactRecord } | null {
+  if (session.stage !== "published") return null;
+
+  const reviews = session.records.reviews;
+  for (let i = reviews.length - 1; i >= 0; i--) {
+    const review = reviews[i];
+    if (review.action !== "approve") continue;
+    const preview = session.records.previews.find(
+      (p) => p.preview_id === review.target_preview_id,
+    );
+    if (!preview) return null;
+    const artifact = session.records.artifacts.find(
+      (a) => a.artifact_id === preview.artifact_id,
+    );
+    if (!artifact) return null;
+    return { preview, artifact };
+  }
+  return null;
+}
