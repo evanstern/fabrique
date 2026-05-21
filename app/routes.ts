@@ -7,4 +7,8 @@ export default [
   route("api/sessions/:id/events", "routes/api.sessions.$id.events.tsx"),
   route("api/sessions/:id/stream", "routes/api.sessions.$id.stream.tsx"),
   route("s/:id", "routes/session.tsx"),
+  route(
+    "artifacts/:session_id/:artifact_id",
+    "routes/artifacts.$session_id.$artifact_id.tsx",
+  ),
 ] satisfies RouteConfig;
