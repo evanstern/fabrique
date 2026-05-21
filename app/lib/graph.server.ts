@@ -1,7 +1,7 @@
 import { StateGraph, START, END, Annotation, interrupt } from "@langchain/langgraph";
 import { MongoDBSaver } from "@langchain/langgraph-checkpoint-mongodb";
 import { ChatAnthropic } from "@langchain/anthropic";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getMongoClient } from "./mongo.server";
 import { BriefFieldsSchema, type BriefFields } from "./brief.server";
@@ -41,6 +41,10 @@ const GraphState = Annotation.Root({
     reducer: (_, n) => n,
   }),
   ready: Annotation<boolean>({ default: () => false, reducer: (_, n) => n }),
+  last_review_action: Annotation<"approve" | "revise" | null>({
+    default: () => null,
+    reducer: (_, n) => n,
+  }),
 });
 
 const INGEST_SYSTEM = `You translate a user's raw page-making brief into structured fields.
@@ -73,6 +77,23 @@ Output a complete HTML document:
 - Be honest about what the brief actually says. Do not invent product names, features, or claims that are not in the brief.
 
 Also return a short title and a few design_notes explaining the choices you made so the user can review them.`;
+
+const APPLY_REVISION_SYSTEM = `You are revising a single self-contained HTML page based on user feedback.
+
+You will be given:
+- The brief (summary, goals, constraints).
+- The full HTML of the previous preview the user reviewed.
+- The user's review notes describing what should change.
+
+Output a complete revised HTML document:
+- Begins with <!doctype html> and includes <html>, <head>, and <body>.
+- All CSS is inlined in <style> tags. All JS (if any) is inlined in <script> tags.
+- No external assets, no external stylesheets, no external scripts, no <link rel="stylesheet">, no remote fonts.
+- Address the review notes directly and visibly. If the user asked for "warmer hero", the hero should look warmer.
+- You may make small targeted edits OR substantially rewrite the page — whichever best serves the notes. Both are valid; don't force one strategy.
+- Stay honest to the brief. Do not invent product names, features, or claims that are not in the brief.
+
+Also return a short title and a few design_notes explaining what you changed and why.`;
 
 function artifactsDir(): string {
   return process.env.ARTIFACTS_DIR ?? "./artifacts";
@@ -258,7 +279,108 @@ async function requestPreviewDecision(
   };
   await appendReview(state.session_id, record);
 
+  return { last_review_action: review.action };
+}
+
+async function applyRevision(
+  state: typeof GraphState.State,
+): Promise<Partial<typeof GraphState.State>> {
+  const session = await getSession(state.session_id);
+  if (!session) {
+    throw new Error(`apply_revision: session ${state.session_id} not found`);
+  }
+
+  const latestPreview = session.records.previews.at(-1);
+  if (!latestPreview) {
+    throw new Error(
+      `apply_revision: no preview to revise on session ${state.session_id}`,
+    );
+  }
+  const priorArtifact = session.records.artifacts.find(
+    (a) => a.artifact_id === latestPreview.artifact_id,
+  );
+  if (!priorArtifact) {
+    throw new Error(
+      `apply_revision: artifact ${latestPreview.artifact_id} not found on session ${state.session_id}`,
+    );
+  }
+  const latestReview = session.records.reviews.at(-1);
+  if (!latestReview) {
+    throw new Error(
+      `apply_revision: no review record on session ${state.session_id}`,
+    );
+  }
+
+  const priorHtmlPath = join(
+    artifactsDir(),
+    state.session_id,
+    `${priorArtifact.artifact_id}.html`,
+  );
+  const priorHtml = await readFile(priorHtmlPath, "utf8");
+
+  const llm = new ChatAnthropic({
+    model: "claude-sonnet-4-5-20250929",
+    temperature: 0,
+    maxTokens: 16000,
+  }).withStructuredOutput(PreviewSchema);
+
+  const preview = (await llm.invoke([
+    { role: "system", content: APPLY_REVISION_SYSTEM },
+    {
+      role: "user",
+      content: [
+        `Brief:`,
+        ``,
+        `summary: ${state.summary}`,
+        `goals: ${JSON.stringify(state.goals)}`,
+        `constraints: ${JSON.stringify(state.constraints)}`,
+        ``,
+        `Review notes from the user on the previous preview:`,
+        JSON.stringify(latestReview.notes),
+        ``,
+        `Previous preview HTML (the one the user just reviewed):`,
+        priorHtml,
+      ].join("\n"),
+    },
+  ])) as Preview;
+
+  const artifact_id = nextSequentialId(
+    "artifact",
+    session.records.artifacts.length,
+  );
+  const preview_id = nextSequentialId(
+    "preview",
+    session.records.previews.length,
+  );
+
+  const dir = join(artifactsDir(), state.session_id);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, `${artifact_id}.html`), preview.html, "utf8");
+
+  const artifactRecord: ArtifactRecord = {
+    artifact_id,
+    type: "html_preview",
+    access: { url: artifactUrl(state.session_id, artifact_id) },
+  };
+  const previewRecord: PreviewRecord = {
+    preview_id,
+    artifact_id,
+  };
+
+  await appendPreviewArtifact(
+    state.session_id,
+    artifactRecord,
+    previewRecord,
+    "preview_ready",
+  );
+
   return {};
+}
+
+function reviewDestination(
+  state: typeof GraphState.State,
+): "apply_revision" | typeof END {
+  return state.last_review_action === "revise" ? "apply_revision" : END;
 }
 
 function defineWorkflow() {
@@ -266,7 +388,8 @@ function defineWorkflow() {
     .addNode("ingest_brief", ingestBrief)
     .addNode("clarify_or_confirm_brief", clarifyOrConfirmBrief)
     .addNode("generate_previews", generatePreviews)
-    .addNode("request_preview_decision", requestPreviewDecision);
+    .addNode("request_preview_decision", requestPreviewDecision)
+    .addNode("apply_revision", applyRevision);
 
   const briefingPhase = nodes
     .addEdge(START, "ingest_brief")
@@ -281,9 +404,18 @@ function defineWorkflow() {
     "request_preview_decision",
   );
 
-  const reviewPhase = previewPhase.addEdge("request_preview_decision", END);
+  const reviewPhase = previewPhase.addConditionalEdges(
+    "request_preview_decision",
+    reviewDestination,
+    ["apply_revision", END],
+  );
 
-  return reviewPhase;
+  const revisionPhase = reviewPhase.addEdge(
+    "apply_revision",
+    "request_preview_decision",
+  );
+
+  return revisionPhase;
 }
 
 let compiledPromise: ReturnType<typeof buildGraph> | null = null;
