@@ -79,3 +79,38 @@ export async function getSession(id: string): Promise<Session | null> {
     { projection: { _id: 0 } },
   );
 }
+
+export async function setRawInput(
+  session_id: string,
+  raw_input: string,
+): Promise<void> {
+  const db = await getDb();
+  await db
+    .collection<Session>(SESSIONS)
+    .updateOne({ session_id }, { $set: { "brief.raw_input": raw_input } });
+}
+
+type BriefPatch = {
+  summary: string;
+  goals: string[];
+  constraints: string[];
+  open_questions: string[];
+};
+
+export async function patchBrief(
+  session_id: string,
+  patch: BriefPatch,
+): Promise<void> {
+  const db = await getDb();
+  await db.collection<Session>(SESSIONS).updateOne(
+    { session_id },
+    {
+      $set: {
+        "brief.summary": patch.summary,
+        "brief.goals": patch.goals,
+        "brief.constraints": patch.constraints,
+        "brief.open_questions": patch.open_questions,
+      },
+    },
+  );
+}

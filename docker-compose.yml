@@ -10,6 +10,7 @@ services:
     environment:
       NODE_ENV: production
       MONGO_URL: ${MONGO_URL:?MONGO_URL is required (see .env.example)}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is required (see .env.example)}
       ARTIFACTS_DIR: /app/artifacts
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8422}
     volumes:
