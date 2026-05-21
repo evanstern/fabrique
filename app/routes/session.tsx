@@ -10,12 +10,14 @@ import {
 } from "../lib/graph.server";
 import { publishSnapshot } from "../lib/sse-hub.server";
 import type { SessionSnapshot } from "../lib/snapshots.server";
+import { requireAuth } from "../lib/auth.server";
 
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `fabrique — ${params.id}` }];
 }
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
+  requireAuth(request);
   const session = await getSession(params.id);
   if (!session) {
     throw new Response("session not found", { status: 404 });
@@ -26,6 +28,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
+  requireAuth(request);
   const session = await getSession(params.id);
   if (!session) {
     throw new Response("session not found", { status: 404 });
@@ -120,9 +123,19 @@ export default function SessionPage({
     <main className="min-h-screen px-6 py-12">
       <div className="max-w-2xl mx-auto space-y-8">
         <header className="space-y-1">
-          <p className="text-xs uppercase tracking-wider text-gray-500">
-            fabrique session
-          </p>
+          <div className="flex items-start justify-between">
+            <p className="text-xs uppercase tracking-wider text-gray-500">
+              fabrique session
+            </p>
+            <form action="/logout" method="post">
+              <button
+                type="submit"
+                className="text-xs text-gray-500 underline"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
           <h1 className="text-2xl font-light tracking-tight">
             {session.session_id}
           </h1>
