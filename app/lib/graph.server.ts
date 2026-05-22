@@ -17,6 +17,7 @@ import {
   setRawInput,
   setStage,
 } from "./sessions.server";
+import { publishProgress } from "./sse-hub.server";
 import {
   PreviewSchema,
   artifactUrl,
@@ -106,6 +107,32 @@ function artifactsDir(): string {
   return process.env.ARTIFACTS_DIR ?? "./artifacts";
 }
 
+const PROGRESS_TICK_MS = 150;
+
+async function withProgress<T>(
+  session_id: string,
+  node: string,
+  phase: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  publishProgress(session_id, { node, phase, status: "started", tick: 0 });
+  let tick = 1;
+  const interval = setInterval(() => {
+    publishProgress(session_id, {
+      node,
+      phase,
+      status: "streaming",
+      tick: tick++,
+    });
+  }, PROGRESS_TICK_MS);
+  try {
+    return await fn();
+  } finally {
+    clearInterval(interval);
+    publishProgress(session_id, { node, phase, status: "complete", tick });
+  }
+}
+
 async function ingestBrief(
   state: typeof GraphState.State,
 ): Promise<Partial<typeof GraphState.State>> {
@@ -114,13 +141,19 @@ async function ingestBrief(
     temperature: 0,
   }).withStructuredOutput(BriefFieldsSchema);
 
-  const fields = (await llm.invoke([
-    { role: "system", content: INGEST_SYSTEM },
-    {
-      role: "user",
-      content: `Raw brief from the user:\n\n${state.raw_input}`,
-    },
-  ])) as BriefFields;
+  const fields = (await withProgress(
+    state.session_id,
+    "ingest_brief",
+    "refining_brief",
+    () =>
+      llm.invoke([
+        { role: "system", content: INGEST_SYSTEM },
+        {
+          role: "user",
+          content: `Raw brief from the user:\n\n${state.raw_input}`,
+        },
+      ]),
+  )) as BriefFields;
 
   await patchBrief(state.session_id, fields);
 
@@ -140,24 +173,30 @@ async function clarifyOrConfirmBrief(
     temperature: 0,
   }).withStructuredOutput(ClarificationVerdictSchema);
 
-  const verdict = (await llm.invoke([
-    { role: "system", content: CLARIFY_SYSTEM },
-    {
-      role: "user",
-      content: [
-        `Brief to evaluate:`,
-        ``,
-        `summary: ${state.summary}`,
-        `goals: ${JSON.stringify(state.goals)}`,
-        `constraints: ${JSON.stringify(state.constraints)}`,
-        `open_questions (from ingest, advisory): ${JSON.stringify(state.open_questions)}`,
-        ``,
-        `Prior interaction with the user (raw input + any Q/A pairs from prior clarification rounds):`,
-        ``,
-        state.raw_input,
-      ].join("\n"),
-    },
-  ])) as ClarificationVerdict;
+  const verdict = (await withProgress(
+    state.session_id,
+    "clarify_or_confirm_brief",
+    "checking_readiness",
+    () =>
+      llm.invoke([
+        { role: "system", content: CLARIFY_SYSTEM },
+        {
+          role: "user",
+          content: [
+            `Brief to evaluate:`,
+            ``,
+            `summary: ${state.summary}`,
+            `goals: ${JSON.stringify(state.goals)}`,
+            `constraints: ${JSON.stringify(state.constraints)}`,
+            `open_questions (from ingest, advisory): ${JSON.stringify(state.open_questions)}`,
+            ``,
+            `Prior interaction with the user (raw input + any Q/A pairs from prior clarification rounds):`,
+            ``,
+            state.raw_input,
+          ].join("\n"),
+        },
+      ]),
+  )) as ClarificationVerdict;
 
   if (verdict.ready) {
     return { ready: true };

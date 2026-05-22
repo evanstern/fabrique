@@ -1,12 +1,21 @@
 import type { Route } from "./+types/api.sessions.$id.stream";
 import { buildSnapshot, type SessionSnapshot } from "../lib/snapshots.server";
-import { subscribe } from "../lib/sse-hub.server";
+import {
+  subscribe,
+  subscribeProgress,
+  type ProgressEvent,
+} from "../lib/sse-hub.server";
 import { requireAuth } from "../lib/auth.server";
 
 const HEARTBEAT_MS = 20_000;
+const PROGRESS_THROTTLE_MS = 150;
 
 function encodeSnapshot(snapshot: SessionSnapshot): string {
   return `data: ${JSON.stringify(snapshot)}\n\n`;
+}
+
+function encodeProgress(event: ProgressEvent): string {
+  return `event: progress\ndata: ${JSON.stringify(event)}\n\n`;
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -37,6 +46,19 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         safeEnqueue(encodeSnapshot(snapshot));
       });
 
+      let lastProgressAt = 0;
+      const unsubscribeProgress = subscribeProgress(params.id, (event) => {
+        const now = Date.now();
+        if (
+          event.status === "streaming" &&
+          now - lastProgressAt < PROGRESS_THROTTLE_MS
+        ) {
+          return;
+        }
+        lastProgressAt = now;
+        safeEnqueue(encodeProgress(event));
+      });
+
       const heartbeat = setInterval(() => {
         safeEnqueue(`: heartbeat\n\n`);
       }, HEARTBEAT_MS);
@@ -46,6 +68,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         closed = true;
         clearInterval(heartbeat);
         unsubscribe();
+        unsubscribeProgress();
         try {
           controller.close();
         } catch {
