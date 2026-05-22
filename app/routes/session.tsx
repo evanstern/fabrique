@@ -90,6 +90,20 @@ type LiveState = {
   interrupt: PendingInterrupt | null;
 };
 
+type ProgressState = {
+  node: string;
+  phase: string;
+  status: "started" | "streaming" | "complete";
+  tick?: number;
+};
+
+function phaseLabel(phase: string | null): string {
+  if (phase === "refining_brief") return "Refining your brief";
+  if (phase === "checking_readiness")
+    return "Checking if I can start designing";
+  return "Thinking";
+}
+
 export default function SessionPage({
   loaderData,
   actionData,
@@ -102,6 +116,7 @@ export default function SessionPage({
     stage: session.stage,
     interrupt: initialInterrupt,
   });
+  const [progress, setProgress] = useState<ProgressState | null>(null);
 
   useEffect(() => {
     const es = new EventSource(`/api/sessions/${session.session_id}/stream`);
@@ -109,15 +124,30 @@ export default function SessionPage({
       try {
         const snap = JSON.parse(ev.data) as SessionSnapshot;
         setLive({ stage: snap.stage, interrupt: snap.interrupt });
+        setProgress(null);
       } catch {
         // Bad payload from server is not actionable here; ignore.
       }
     };
+    es.addEventListener("progress", (ev) => {
+      try {
+        const p = JSON.parse((ev as MessageEvent).data) as ProgressState;
+        setProgress(p);
+      } catch {
+        // Bad payload from server is not actionable here; ignore.
+      }
+    });
     es.onerror = () => {
       // Browser auto-reconnects; nothing useful to do per-message.
     };
     return () => es.close();
   }, [session.session_id]);
+
+  useEffect(() => {
+    if (!submitting) {
+      setProgress(null);
+    }
+  }, [submitting]);
 
   return (
     <main className="min-h-screen px-6 py-12">
@@ -145,11 +175,15 @@ export default function SessionPage({
         <Brief session={session} />
 
         {live.interrupt && live.interrupt.kind === "answer_clarification" ? (
-          <Clarification
-            questions={live.interrupt.questions}
-            submitting={submitting}
-            error={actionData && "error" in actionData ? actionData.error : null}
-          />
+          submitting ? (
+            <ClarificationSkeleton progress={progress} />
+          ) : (
+            <Clarification
+              questions={live.interrupt.questions}
+              submitting={submitting}
+              error={actionData && "error" in actionData ? actionData.error : null}
+            />
+          )
         ) : null}
 
         {live.stage === "published" && published ? (
@@ -285,6 +319,41 @@ function Clarification({
           {submitting ? "Sending..." : "Send answers"}
         </button>
       </Form>
+    </section>
+  );
+}
+
+function ClarificationSkeleton({
+  progress,
+}: {
+  progress: ProgressState | null;
+}) {
+  const [dots, setDots] = useState(1);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setDots((d) => (d % 3) + 1);
+    }, 400);
+    return () => clearInterval(id);
+  }, []);
+
+  const label = phaseLabel(progress?.phase ?? null);
+  const ellipsis = ".".repeat(dots);
+
+  return (
+    <section className="space-y-3 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4">
+      <h2 className="text-sm uppercase tracking-wider text-amber-800 dark:text-amber-300">
+        Thinking about your answers
+      </h2>
+      <p className="text-base text-amber-900 dark:text-amber-200">
+        {label}
+        {ellipsis}
+      </p>
+      <div className="space-y-2 pt-2">
+        <div className="h-4 w-3/4 rounded bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
+        <div className="h-9 w-full rounded bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
+        <div className="h-4 w-2/3 rounded bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
+        <div className="h-9 w-full rounded bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
+      </div>
     </section>
   );
 }
