@@ -66,6 +66,12 @@ Rules:
 - If not ready, list the SPECIFIC questions whose answers would unblock a first preview. Be concrete (a designer could act on the answer). Avoid generic prompts like "tell me more".
 - Prefer ready over not-ready when the call is close. Iteration is cheap; the user can refine on preview review.
 
+Prior Q/A history:
+- The user message may include a "Prior interaction" section containing the raw brief plus "Q: ...\nA: ..." pairs from previous clarification rounds (questions you or a prior gate pass already asked, with the user's answers).
+- DO NOT re-ask questions whose answers have been given, even if the answer was vague (e.g. "idk", "anything", "I don't know yet", "you choose"). Treat vague answers as "user does not want to specify; proceed" — that topic is settled, move on.
+- If the prior Q/A history plus a partial answer is enough to make a first preview attempt, prefer ready=true over asking for more refinement.
+- If you must ask more questions, target gaps NOT already covered by the prior Q/A history — different topics, or genuinely deeper than what was asked before. Do not paraphrase prior questions.
+
 Return a single verdict.`;
 
 const GENERATE_PREVIEWS_SYSTEM = `You design a single self-contained HTML page that realizes the user's brief.
@@ -145,6 +151,10 @@ async function clarifyOrConfirmBrief(
         `goals: ${JSON.stringify(state.goals)}`,
         `constraints: ${JSON.stringify(state.constraints)}`,
         `open_questions (from ingest, advisory): ${JSON.stringify(state.open_questions)}`,
+        ``,
+        `Prior interaction with the user (raw input + any Q/A pairs from prior clarification rounds):`,
+        ``,
+        state.raw_input,
       ].join("\n"),
     },
   ])) as ClarificationVerdict;
