@@ -12,12 +12,10 @@ import { PreviewSchema, type Preview } from "@schemas/llm";
 import { appendPreviewArtifact, getSession } from "@sessions";
 import { GENERATE_PREVIEWS_SYSTEM } from "../prompts";
 import { artifactsDir } from "../runtime/artifacts-dir";
-import type { GraphStateValue } from "../state";
+import type { GraphNode } from "../state";
 
 /** Generate and persist the first preview HTML artifact for a session. */
-export async function generatePreviews(
-  state: GraphStateValue,
-): Promise<Partial<GraphStateValue>> {
+export const generatePreviews: GraphNode = async (state) => {
   const llm = new ChatAnthropic({
     model: "claude-sonnet-4-5-20250929",
     temperature: 0,

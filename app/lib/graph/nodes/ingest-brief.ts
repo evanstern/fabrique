@@ -3,13 +3,11 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { BriefFieldsSchema, type BriefFields } from "@schemas/llm";
 import { patchBrief } from "@sessions";
 import { INGEST_SYSTEM } from "../prompts";
-import type { GraphStateValue } from "../state";
+import type { GraphNode } from "../state";
 import { withProgress } from "../runtime/progress";
 
 /** Parse raw brief text into the structured fields stored on the session. */
-export async function ingestBrief(
-  state: GraphStateValue,
-): Promise<Partial<GraphStateValue>> {
+export const ingestBrief: GraphNode = async (state) => {
   const llm = new ChatAnthropic({
     model: "claude-sonnet-4-5-20250929",
     temperature: 0,

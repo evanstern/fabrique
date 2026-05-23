@@ -12,12 +12,10 @@ import { PreviewSchema, type Preview } from "@schemas/llm";
 import { appendPreviewArtifact, getSession } from "@sessions";
 import { APPLY_REVISION_SYSTEM } from "../prompts";
 import { artifactsDir } from "../runtime/artifacts-dir";
-import type { GraphStateValue } from "../state";
+import type { GraphNode } from "../state";
 
 /** Rewrite the latest preview HTML in response to the stored review notes. */
-export async function applyRevision(
-  state: GraphStateValue,
-): Promise<Partial<GraphStateValue>> {
+export const applyRevision: GraphNode = async (state) => {
   const session = await getSession(state.session_id);
   if (!session) {
     throw new Error(`apply_revision: session ${state.session_id} not found`);

@@ -3,12 +3,10 @@ import { interrupt } from "@langchain/langgraph";
 import { nextSequentialId, type ReviewRecord } from "@records";
 import type { ReviewPreviewEvent } from "@schemas/input";
 import { appendReview, getSession } from "@sessions";
-import type { GraphStateValue } from "../state";
+import type { GraphNode } from "../state";
 
 /** Ask the user to approve or revise the most recent preview. */
-export async function requestPreviewDecision(
-  state: GraphStateValue,
-): Promise<Partial<GraphStateValue>> {
+export const requestPreviewDecision: GraphNode = async (state) => {
   const session = await getSession(state.session_id);
   if (!session) {
     throw new Error(

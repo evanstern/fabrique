@@ -7,13 +7,11 @@ import {
 } from "@schemas/llm";
 import { setRawInput } from "@sessions";
 import { CLARIFY_SYSTEM } from "../prompts";
-import type { GraphStateValue } from "../state";
+import type { GraphNode } from "../state";
 import { withProgress } from "../runtime/progress";
 
 /** Decide whether the brief can move forward or needs user clarification. */
-export async function clarifyOrConfirmBrief(
-  state: GraphStateValue,
-): Promise<Partial<GraphStateValue>> {
+export const clarifyOrConfirmBrief: GraphNode = async (state) => {
   const llm = new ChatAnthropic({
     model: "claude-sonnet-4-5-20250929",
     temperature: 0,

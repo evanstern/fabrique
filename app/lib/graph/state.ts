@@ -29,3 +29,8 @@ export const GraphState = Annotation.Root({
 
 /** Inferred runtime state shape used by the graph nodes. */
 export type GraphStateValue = typeof GraphState.State;
+
+/** Shared callable contract for every LangGraph node in this workflow. */
+export interface GraphNode {
+  (state: GraphStateValue): Promise<Partial<GraphStateValue>>;
+}
