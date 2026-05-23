@@ -7,4 +7,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  server: {
+    allowedHosts: ["dev-fabrique.infinitynode.ai", "localhost"],
+  },
 });
