@@ -1,9 +1,9 @@
 import { redirect, Form, useNavigation } from "react-router";
 import type { Route } from "./+types/home";
-import { createSession, setRawInput } from "../lib/sessions.server";
-import { getGraph } from "../lib/graph.server";
-import { publishSnapshot } from "../lib/sse-hub.server";
-import { requireAuth } from "../lib/auth.server";
+import { createSession, setRawInput } from "@sessions";
+import { getGraph } from "@graph";
+import { publishSnapshot } from "@stream";
+import { requireAuth } from "@auth";
 
 export function meta(_args: Route.MetaArgs) {
   return [

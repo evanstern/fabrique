@@ -1,4 +1,4 @@
-import { buildSnapshot, type SessionSnapshot } from "./snapshots.server";
+import type { SessionSnapshot } from "./snapshot";
 
 export type ProgressEvent = {
   node: string;
@@ -66,12 +66,13 @@ export function subscribeProgress(
   };
 }
 
-export async function publishSnapshot(session_id: string): Promise<void> {
+export function publishBuiltSnapshot(
+  session_id: string,
+  snapshot: SessionSnapshot,
+): void {
   const hub = getHub();
   const set = hub.snapshotSubs.get(session_id);
   if (!set || set.size === 0) return;
-  const snapshot = await buildSnapshot(session_id);
-  if (!snapshot) return;
   for (const cb of set) {
     try {
       cb(snapshot);
@@ -81,10 +82,7 @@ export async function publishSnapshot(session_id: string): Promise<void> {
   }
 }
 
-export function publishProgress(
-  session_id: string,
-  event: ProgressEvent,
-): void {
+export function publishProgress(session_id: string, event: ProgressEvent): void {
   const hub = getHub();
   const set = hub.progressSubs.get(session_id);
   if (!set || set.size === 0) return;

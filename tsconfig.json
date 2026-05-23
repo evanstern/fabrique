@@ -14,7 +14,21 @@
     "jsx": "react-jsx",
     "rootDirs": [".", "./.react-router/types"],
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": ["./app/*"],
+      "@auth": ["./app/lib/auth/index.ts"],
+      "@auth/*": ["./app/lib/auth/*"],
+      "@db": ["./app/lib/db/mongo.ts"],
+      "@db/*": ["./app/lib/db/*"],
+      "@sessions": ["./app/lib/sessions/index.ts"],
+      "@sessions/*": ["./app/lib/sessions/*"],
+      "@records": ["./app/lib/records/index.ts"],
+      "@records/*": ["./app/lib/records/*"],
+      "@schemas": ["./app/lib/schemas/index.ts"],
+      "@schemas/*": ["./app/lib/schemas/*"],
+      "@graph": ["./app/lib/graph/index.ts"],
+      "@graph/*": ["./app/lib/graph/*"],
+      "@stream": ["./app/lib/stream/index.ts"],
+      "@stream/*": ["./app/lib/stream/*"]
     },
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,
