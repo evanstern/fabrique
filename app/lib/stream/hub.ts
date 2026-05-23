@@ -1,5 +1,7 @@
-import { buildSnapshot, type SessionSnapshot } from "./snapshots.server";
+// In-memory subscriber hub for session snapshots and graph progress.
+import type { SessionSnapshot } from "./snapshot";
 
+/** Progress events emitted by the graph into the live stream layer. */
 export type ProgressEvent = {
   node: string;
   phase: string;
@@ -7,9 +9,12 @@ export type ProgressEvent = {
   tick?: number;
 };
 
+/** Snapshot listeners receive the latest assembled session snapshot. */
 type SnapshotSubscriber = (snapshot: SessionSnapshot) => void;
+/** Progress listeners receive heartbeat events from running graph nodes. */
 type ProgressSubscriber = (event: ProgressEvent) => void;
 
+/** In-memory subscriber registry shared across requests in the same process. */
 type Hub = {
   snapshotSubs: Map<string, Set<SnapshotSubscriber>>;
   progressSubs: Map<string, Set<ProgressSubscriber>>;
@@ -17,6 +22,7 @@ type Hub = {
 
 const GLOBAL_KEY = "__fabrique_sse_hub__";
 
+/** Store the hub on globalThis so the SSE layer can span module reloads. */
 function getHub(): Hub {
   const g = globalThis as unknown as Record<string, Hub | undefined>;
   if (!g[GLOBAL_KEY]) {
@@ -28,6 +34,7 @@ function getHub(): Hub {
   return g[GLOBAL_KEY]!;
 }
 
+/** Subscribe to snapshot updates for one session. */
 export function subscribe(
   session_id: string,
   cb: SnapshotSubscriber,
@@ -47,6 +54,7 @@ export function subscribe(
   };
 }
 
+/** Subscribe to graph progress events for one session. */
 export function subscribeProgress(
   session_id: string,
   cb: ProgressSubscriber,
@@ -66,12 +74,14 @@ export function subscribeProgress(
   };
 }
 
-export async function publishSnapshot(session_id: string): Promise<void> {
+/** Publish a built snapshot to all current session subscribers. */
+export function publishBuiltSnapshot(
+  session_id: string,
+  snapshot: SessionSnapshot,
+): void {
   const hub = getHub();
   const set = hub.snapshotSubs.get(session_id);
   if (!set || set.size === 0) return;
-  const snapshot = await buildSnapshot(session_id);
-  if (!snapshot) return;
   for (const cb of set) {
     try {
       cb(snapshot);
@@ -81,10 +91,8 @@ export async function publishSnapshot(session_id: string): Promise<void> {
   }
 }
 
-export function publishProgress(
-  session_id: string,
-  event: ProgressEvent,
-): void {
+/** Publish a progress event to all current session subscribers. */
+export function publishProgress(session_id: string, event: ProgressEvent): void {
   const hub = getHub();
   const set = hub.progressSubs.get(session_id);
   if (!set || set.size === 0) return;

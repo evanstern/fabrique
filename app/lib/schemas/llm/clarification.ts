@@ -1,5 +1,7 @@
+// Readiness verdict schema used by the clarification gate.
 import { z } from "zod";
 
+/** Readiness verdict returned by the clarification gate. */
 export const ClarificationVerdictSchema = z.object({
   ready: z
     .boolean()
@@ -18,4 +20,5 @@ export const ClarificationVerdictSchema = z.object({
     ),
 });
 
+/** Inferred TypeScript shape for the clarification verdict. */
 export type ClarificationVerdict = z.infer<typeof ClarificationVerdictSchema>;

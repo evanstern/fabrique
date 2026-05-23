@@ -7,7 +7,7 @@ import {
   getClientIp,
   sanitizeNext,
   signAuthCookie,
-} from "../lib/auth.server";
+} from "@auth";
 
 export function meta() {
   return [{ title: "fabrique — sign in" }];

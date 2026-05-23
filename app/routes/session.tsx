@@ -2,15 +2,14 @@ import { useEffect, useState } from "react";
 import { Form, useNavigation } from "react-router";
 import type { Route } from "./+types/session";
 import { Command } from "@langchain/langgraph";
-import { getPublishedPreview, getSession } from "../lib/sessions.server";
+import { getPublishedPreview, getSession } from "@sessions";
 import {
   getGraph,
   getPendingInterrupt,
   type PendingInterrupt,
-} from "../lib/graph.server";
-import { publishSnapshot } from "../lib/sse-hub.server";
-import type { SessionSnapshot } from "../lib/snapshots.server";
-import { requireAuth } from "../lib/auth.server";
+} from "@graph";
+import { publishSnapshot, type SessionSnapshot } from "@stream";
+import { requireAuth } from "@auth";
 
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `fabrique — ${params.id}` }];

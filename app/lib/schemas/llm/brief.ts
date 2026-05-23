@@ -1,5 +1,7 @@
+// Structured brief output schema used by the ingest node.
 import { z } from "zod";
 
+/** Structured brief fields returned by the ingest step. */
 export const BriefFieldsSchema = z.object({
   summary: z
     .string()
@@ -23,4 +25,5 @@ export const BriefFieldsSchema = z.object({
     ),
 });
 
+/** Inferred TypeScript shape for the structured brief output. */
 export type BriefFields = z.infer<typeof BriefFieldsSchema>;
