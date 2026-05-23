@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+// Auth cookie helpers: sign, verify, and format the single login cookie.
 // Cookie value format: <issued_at_ms>.<hmac_sha256_hex>
 // Attributes: HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000
 export const COOKIE_NAME = "fabrique_auth";
@@ -32,12 +33,14 @@ function safeEqualHex(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 
+/** Create the signed payload stored in the auth cookie. */
 export function signAuthCookie(): string {
   const issuedAt = Date.now();
   const mac = hmacHex(String(issuedAt));
   return `${issuedAt}.${mac}`;
 }
 
+/** Verify the auth cookie signature and reject malformed or expired values. */
 export function verifyAuthCookie(value: string | undefined): boolean {
   if (!value) return false;
   const dot = value.indexOf(".");
@@ -56,14 +59,17 @@ export function verifyAuthCookie(value: string | undefined): boolean {
   return safeEqualHex(expected, mac);
 }
 
+/** Build the Set-Cookie header for a successful login. */
 export function buildAuthCookieHeader(value: string): string {
   return `${COOKIE_NAME}=${value}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${MAX_AGE_SECONDS}`;
 }
 
+/** Build the Set-Cookie header that clears the auth cookie. */
 export function buildClearAuthCookieHeader(): string {
   return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
 }
 
+/** Read the auth cookie from the incoming request headers. */
 export function readAuthCookie(request: Request): string | undefined {
   const header = request.headers.get("cookie");
   if (!header) return undefined;

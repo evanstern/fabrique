@@ -1,3 +1,4 @@
+// Shared Mongo access: create one client and hand out the default database.
 import { MongoClient, type Db } from "mongodb";
 
 let clientPromise: Promise<MongoClient> | null = null;
@@ -19,6 +20,7 @@ export async function getMongoClient(): Promise<MongoClient> {
   return getClient();
 }
 
+/** Return the default database handle used by session and workflow code. */
 export async function getDb(): Promise<Db> {
   const client = await getClient();
   return client.db();

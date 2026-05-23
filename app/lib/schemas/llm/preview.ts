@@ -1,5 +1,7 @@
+// Preview payload schema used by preview generation and revision.
 import { z } from "zod";
 
+/** Structured preview payload returned by the preview generation step. */
 export const PreviewSchema = z.object({
   html: z
     .string()
@@ -16,4 +18,5 @@ export const PreviewSchema = z.object({
     ),
 });
 
+/** Inferred TypeScript shape for generated preview output. */
 export type Preview = z.infer<typeof PreviewSchema>;

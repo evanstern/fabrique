@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
+// Password comparison helper for the login flow.
 function getPassword(): string {
   const password = process.env.FABRIQUE_PASSWORD;
   if (!password) {
@@ -8,6 +9,7 @@ function getPassword(): string {
   return password;
 }
 
+/** Compare the submitted password in constant time against the configured secret. */
 export function constantTimePasswordMatch(submitted: string): boolean {
   const expected = getPassword();
   const a = Buffer.from(submitted);

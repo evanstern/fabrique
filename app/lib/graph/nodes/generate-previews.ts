@@ -1,3 +1,4 @@
+// Graph node that turns the brief into the first self-contained HTML preview.
 import { ChatAnthropic } from "@langchain/anthropic";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -13,6 +14,7 @@ import { GENERATE_PREVIEWS_SYSTEM } from "../prompts";
 import { artifactsDir } from "../runtime/artifacts-dir";
 import type { GraphStateValue } from "../state";
 
+/** Generate and persist the first preview HTML artifact for a session. */
 export async function generatePreviews(
   state: GraphStateValue,
 ): Promise<Partial<GraphStateValue>> {

@@ -1,3 +1,4 @@
+// Compile the LangGraph workflow and expose helpers for routing and interrupts.
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { getMongoClient } from "@db";
 import { MongoDBSaver } from "@langchain/langgraph-checkpoint-mongodb";
@@ -9,12 +10,14 @@ import { publishSelectedPreview } from "./nodes/publish-selected-preview";
 import { requestPreviewDecision } from "./nodes/request-preview-decision";
 import { GraphState, type GraphStateValue } from "./state";
 
+/** Route clarification to either another ingest pass or preview generation. */
 function clarifyDestination(
   state: GraphStateValue,
 ): "ingest_brief" | "generate_previews" {
   return state.ready ? "generate_previews" : "ingest_brief";
 }
 
+/** Route preview review to either revision or publish. */
 function reviewDestination(
   state: GraphStateValue,
 ): "apply_revision" | "publish_selected_preview" {
@@ -23,6 +26,7 @@ function reviewDestination(
     : "publish_selected_preview";
 }
 
+/** Assemble the workflow graph before it is compiled with Mongo checkpointing. */
 function defineWorkflow() {
   const nodes = new StateGraph(GraphState)
     .addNode("ingest_brief", ingestBrief)
@@ -64,14 +68,17 @@ function defineWorkflow() {
   return publishPhase;
 }
 
+// Keep the compiled graph cached so repeated requests reuse the same checkpointer wiring.
 let compiledPromise: ReturnType<typeof buildGraph> | null = null;
 
+/** Build and compile the workflow graph backed by Mongo checkpointing. */
 async function buildGraph() {
   const client = await getMongoClient();
   const checkpointer = new MongoDBSaver({ client });
   return defineWorkflow().compile({ checkpointer });
 }
 
+/** Return the cached compiled graph, building it lazily on first use. */
 export async function getGraph() {
   if (!compiledPromise) {
     compiledPromise = buildGraph().catch((error) => {
@@ -82,10 +89,12 @@ export async function getGraph() {
   return compiledPromise;
 }
 
+/** Interrupt payloads the UI can surface while the graph waits for input. */
 export type PendingInterrupt =
   | { kind: "answer_clarification"; questions: string[] }
   | { kind: "review_preview"; target_preview_id: string };
 
+/** Inspect the current checkpoint for the next user-facing interrupt, if any. */
 export async function getPendingInterrupt(
   session_id: string,
 ): Promise<PendingInterrupt | null> {

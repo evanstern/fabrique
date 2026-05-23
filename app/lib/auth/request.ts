@@ -1,5 +1,7 @@
 import { readAuthCookie, verifyAuthCookie } from "./cookies";
 
+// Request-gating helpers for auth-protected routes and redirect hygiene.
+/** Require a valid auth cookie, redirecting browser requests or rejecting API calls. */
 export function requireAuth(
   request: Request,
   opts: { api?: boolean } = {},
@@ -22,6 +24,7 @@ export function requireAuth(
   });
 }
 
+/** Derive the best client IP hint from forwarding headers. */
 export function getClientIp(request: Request): string {
   const xff = request.headers.get("x-forwarded-for");
   if (xff) {
@@ -33,6 +36,7 @@ export function getClientIp(request: Request): string {
   return "unknown";
 }
 
+/** Keep post-login redirects on the local site only. */
 export function sanitizeNext(next: string | null): string {
   if (!next) return "/";
   if (!next.startsWith("/")) return "/";

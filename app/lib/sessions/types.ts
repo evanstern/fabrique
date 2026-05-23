@@ -1,6 +1,8 @@
+// Canonical Mongo session document shape and workflow stage vocabulary.
 import type { ArtifactRecord, PreviewRecord, ReviewRecord } from "@records";
 
 // Schema lock: gigi/wiki/decisions/v1-session-document.md
+/** Session stage vocabulary for the canonical Mongo session document. */
 export type SessionStage =
   | "briefing"
   | "designing"
@@ -8,6 +10,7 @@ export type SessionStage =
   | "revising"
   | "published";
 
+/** Canonical Mongo session document shape used across the workflow. */
 export type Session = {
   session_id: string;
   stage: SessionStage;
@@ -25,8 +28,10 @@ export type Session = {
   };
 };
 
+/** Mongo collection name for session documents. */
 export const SESSIONS = "sessions";
 
+/** Patch shape for the structured brief fields inside a session. */
 export type BriefPatch = {
   summary: string;
   goals: string[];

@@ -1,3 +1,4 @@
+// Graph node that gates a brief before preview generation can start.
 import { ChatAnthropic } from "@langchain/anthropic";
 import { interrupt } from "@langchain/langgraph";
 import {
@@ -9,6 +10,7 @@ import { CLARIFY_SYSTEM } from "../prompts";
 import type { GraphStateValue } from "../state";
 import { withProgress } from "../runtime/progress";
 
+/** Decide whether the brief can move forward or needs user clarification. */
 export async function clarifyOrConfirmBrief(
   state: GraphStateValue,
 ): Promise<Partial<GraphStateValue>> {
@@ -62,6 +64,7 @@ export async function clarifyOrConfirmBrief(
   return { raw_input: newRaw, ready: false };
 }
 
+/** Turn clarification answers into the Q/A transcript format ingested later. */
 function formatAnswers(answers: Record<string, string>): string {
   const lines: string[] = [];
   for (const [q, a] of Object.entries(answers)) {

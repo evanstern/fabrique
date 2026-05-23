@@ -1,5 +1,12 @@
+// LangGraph state carried between workflow nodes.
 import { Annotation } from "@langchain/langgraph";
 
+/**
+ * Graph state carried across the workflow nodes.
+ *
+ * The reducers define which values are replaced versus accumulated as the
+ * workflow moves through briefing, previewing, and review.
+ */
 export const GraphState = Annotation.Root({
   session_id: Annotation<string>(),
   raw_input: Annotation<string>({ reducer: (_, n) => n }),
@@ -20,4 +27,5 @@ export const GraphState = Annotation.Root({
   }),
 });
 
+/** Inferred runtime state shape used by the graph nodes. */
 export type GraphStateValue = typeof GraphState.State;

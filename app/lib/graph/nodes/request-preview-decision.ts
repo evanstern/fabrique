@@ -1,9 +1,11 @@
+// Graph node that records the user's decision on the most recent preview.
 import { interrupt } from "@langchain/langgraph";
 import { nextSequentialId, type ReviewRecord } from "@records";
 import type { ReviewPreviewEvent } from "@schemas/input";
 import { appendReview, getSession } from "@sessions";
 import type { GraphStateValue } from "../state";
 
+/** Ask the user to approve or revise the most recent preview. */
 export async function requestPreviewDecision(
   state: GraphStateValue,
 ): Promise<Partial<GraphStateValue>> {

@@ -1,3 +1,4 @@
+// Graph node that normalizes raw brief text into structured session fields.
 import { ChatAnthropic } from "@langchain/anthropic";
 import { BriefFieldsSchema, type BriefFields } from "@schemas/llm";
 import { patchBrief } from "@sessions";
@@ -5,6 +6,7 @@ import { INGEST_SYSTEM } from "../prompts";
 import type { GraphStateValue } from "../state";
 import { withProgress } from "../runtime/progress";
 
+/** Parse raw brief text into the structured fields stored on the session. */
 export async function ingestBrief(
   state: GraphStateValue,
 ): Promise<Partial<GraphStateValue>> {

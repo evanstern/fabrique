@@ -1,5 +1,7 @@
+// In-memory subscriber hub for session snapshots and graph progress.
 import type { SessionSnapshot } from "./snapshot";
 
+/** Progress events emitted by the graph into the live stream layer. */
 export type ProgressEvent = {
   node: string;
   phase: string;
@@ -7,9 +9,12 @@ export type ProgressEvent = {
   tick?: number;
 };
 
+/** Snapshot listeners receive the latest assembled session snapshot. */
 type SnapshotSubscriber = (snapshot: SessionSnapshot) => void;
+/** Progress listeners receive heartbeat events from running graph nodes. */
 type ProgressSubscriber = (event: ProgressEvent) => void;
 
+/** In-memory subscriber registry shared across requests in the same process. */
 type Hub = {
   snapshotSubs: Map<string, Set<SnapshotSubscriber>>;
   progressSubs: Map<string, Set<ProgressSubscriber>>;
@@ -17,6 +22,7 @@ type Hub = {
 
 const GLOBAL_KEY = "__fabrique_sse_hub__";
 
+/** Store the hub on globalThis so the SSE layer can span module reloads. */
 function getHub(): Hub {
   const g = globalThis as unknown as Record<string, Hub | undefined>;
   if (!g[GLOBAL_KEY]) {
@@ -28,6 +34,7 @@ function getHub(): Hub {
   return g[GLOBAL_KEY]!;
 }
 
+/** Subscribe to snapshot updates for one session. */
 export function subscribe(
   session_id: string,
   cb: SnapshotSubscriber,
@@ -47,6 +54,7 @@ export function subscribe(
   };
 }
 
+/** Subscribe to graph progress events for one session. */
 export function subscribeProgress(
   session_id: string,
   cb: ProgressSubscriber,
@@ -66,6 +74,7 @@ export function subscribeProgress(
   };
 }
 
+/** Publish a built snapshot to all current session subscribers. */
 export function publishBuiltSnapshot(
   session_id: string,
   snapshot: SessionSnapshot,
@@ -82,6 +91,7 @@ export function publishBuiltSnapshot(
   }
 }
 
+/** Publish a progress event to all current session subscribers. */
 export function publishProgress(session_id: string, event: ProgressEvent): void {
   const hub = getHub();
   const set = hub.progressSubs.get(session_id);

@@ -1,3 +1,4 @@
+// Create a new session document with the default workflow shape.
 import { randomBytes } from "node:crypto";
 import { getDb } from "@db";
 import { SESSIONS, type Session } from "./types";
@@ -8,6 +9,7 @@ function newSessionId(): string {
   return `sess_${suffix}`;
 }
 
+/** Build the initial session document before any workflow node has run. */
 function emptySession(session_id: string): Session {
   return {
     session_id,
@@ -27,6 +29,7 @@ function emptySession(session_id: string): Session {
   };
 }
 
+/** Insert a fresh session document, retrying on rare id collisions. */
 export async function createSession(): Promise<Session> {
   const db = await getDb();
   const sessions = db.collection<Session>(SESSIONS);

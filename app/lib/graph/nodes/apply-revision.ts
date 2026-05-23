@@ -1,3 +1,4 @@
+// Graph node that rewrites the latest preview in response to review notes.
 import { ChatAnthropic } from "@langchain/anthropic";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -13,6 +14,7 @@ import { APPLY_REVISION_SYSTEM } from "../prompts";
 import { artifactsDir } from "../runtime/artifacts-dir";
 import type { GraphStateValue } from "../state";
 
+/** Rewrite the latest preview HTML in response to the stored review notes. */
 export async function applyRevision(
   state: GraphStateValue,
 ): Promise<Partial<GraphStateValue>> {

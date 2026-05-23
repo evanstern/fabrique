@@ -1,9 +1,11 @@
+// Published-preview lookup derived from the approval trail.
 import type { ArtifactRecord, PreviewRecord } from "@records";
 import type { Session } from "./types";
 
 // Schema lock: gigi/wiki/decisions/v1-preview-publish-semantics.md
 // No `published_preview_id` field on the session document. Published state
 // is derived from the latest `action === 'approve'` review record.
+/** Resolve the artifact currently considered published for a session. */
 export function getPublishedPreview(
   session: Session,
 ): { preview: PreviewRecord; artifact: ArtifactRecord } | null {
