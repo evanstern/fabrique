@@ -74,7 +74,10 @@ async function buildGraph() {
 
 export async function getGraph() {
   if (!compiledPromise) {
-    compiledPromise = buildGraph();
+    compiledPromise = buildGraph().catch((error) => {
+      compiledPromise = null;
+      throw error;
+    });
   }
   return compiledPromise;
 }
