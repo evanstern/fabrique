@@ -3,9 +3,21 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+const allowedHosts = [
+  "localhost",
+  "dev-fabrique.infinitynode.ai",
+  ...(process.env.FABRIQUE_ALLOWED_HOSTS ?? "")
+    .split(",")
+    .map((host) => host.trim())
+    .filter(Boolean),
+];
+
 export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
   server: {
     allowedHosts: ["dev-fabrique.infinitynode.ai", "localhost"],
+  },
+  server: {
+    allowedHosts: Array.from(new Set(allowedHosts)),
   },
 });

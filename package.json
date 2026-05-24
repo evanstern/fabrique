@@ -5,6 +5,10 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
+    "preview:clean": "scripts/preview-clean",
+    "preview:list": "scripts/preview-list",
+    "preview:start": "scripts/preview-start",
+    "preview:stop": "scripts/preview-stop",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc"
   },
