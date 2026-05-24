@@ -45,11 +45,11 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Login({ loaderData }: Route.ComponentProps) {
   const { error, next } = loaderData;
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-12 bg-white dark:bg-gray-950">
-      <div className="w-full max-w-sm space-y-6 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8">
+    <main className="min-h-screen flex items-center justify-center bg-background px-4 py-12 text-foreground">
+      <div className="w-full max-w-sm space-y-6 rounded-md border border-border bg-card p-8 text-card-foreground shadow-soft">
         <div className="space-y-1 text-center">
           <h1 className="text-4xl font-light tracking-tight">fabrique</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Sign in to continue.
           </p>
         </div>
@@ -58,7 +58,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
           <div className="space-y-1">
             <label
               htmlFor="password"
-              className="block text-xs uppercase tracking-wider font-medium text-gray-500 dark:text-gray-400"
+              className="block text-xs uppercase tracking-wider font-medium text-muted-foreground"
             >
               Password
             </label>
@@ -68,15 +68,15 @@ export default function Login({ loaderData }: Route.ComponentProps) {
               type="password"
               required
               autoFocus
-              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400"
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           {error ? (
-            <p className="text-sm text-red-600">Wrong password.</p>
+            <p className="text-sm text-destructive">Wrong password.</p>
           ) : null}
           <button
             type="submit"
-            className="w-full rounded-md bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 font-medium disabled:opacity-50"
+            className="w-full rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground disabled:opacity-50"
           >
             Sign in
           </button>

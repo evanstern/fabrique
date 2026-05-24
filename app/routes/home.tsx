@@ -33,13 +33,13 @@ export default function Home({ actionData }: Route.ComponentProps) {
   const submitting = navigation.state === "submitting";
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6 py-12">
+    <main className="min-h-screen flex items-center justify-center px-6 py-12 text-foreground">
       <div className="max-w-xl w-full space-y-6">
         <div className="flex justify-end">
           <form action="/logout" method="post">
             <button
               type="submit"
-              className="text-xs text-gray-500 underline"
+              className="text-xs text-muted-foreground underline"
             >
               Sign out
             </button>
@@ -47,7 +47,7 @@ export default function Home({ actionData }: Route.ComponentProps) {
         </div>
         <header className="space-y-2">
           <h1 className="text-4xl font-light tracking-tight">fabrique</h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Describe the page you want to make. We&apos;ll ask if anything
             isn&apos;t clear.
           </p>
@@ -59,16 +59,16 @@ export default function Home({ actionData }: Route.ComponentProps) {
             rows={6}
             required
             placeholder="A landing page for my friend's bakery in Brooklyn..."
-            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 text-base font-normal focus:outline-none focus:ring-2 focus:ring-gray-400"
+            className="w-full rounded-md border border-input bg-card p-3 text-base font-normal text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             disabled={submitting}
           />
           {actionData?.error ? (
-            <p className="text-sm text-red-600">{actionData.error}</p>
+            <p className="text-sm text-destructive">{actionData.error}</p>
           ) : null}
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
             {submitting ? "Working..." : "Start"}
           </button>
