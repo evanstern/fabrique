@@ -1,15 +1,115 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-serif: "Fraunces", ui-serif, Georgia, Cambria, "Times New Roman", Times,
+    serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas,
+    "Liberation Mono", monospace;
+
+  --color-ink: #17140f;
+  --color-ink-muted: #6f675a;
+  --color-paper: #fbf6ec;
+  --color-paper-soft: #f4ead9;
+  --color-studio: #e7d8be;
+  --color-charcoal: #24211c;
+  --color-clay: #b5603f;
+  --color-clay-foreground: #fff8ed;
+  --color-moss: #58684b;
+  --color-moss-foreground: #f8f3e7;
+  --color-skyline: #48687e;
+  --color-skyline-foreground: #f6fbff;
+  --color-signal: #d8973c;
+  --color-danger: #a74335;
+  --color-danger-foreground: #fff5f1;
+
+  --color-background: var(--color-paper);
+  --color-foreground: var(--color-ink);
+  --color-muted: var(--color-paper-soft);
+  --color-muted-foreground: var(--color-ink-muted);
+  --color-card: #fffaf1;
+  --color-card-foreground: var(--color-ink);
+  --color-popover: #fffaf1;
+  --color-popover-foreground: var(--color-ink);
+  --color-primary: var(--color-charcoal);
+  --color-primary-foreground: #fffaf1;
+  --color-secondary: var(--color-studio);
+  --color-secondary-foreground: var(--color-ink);
+  --color-accent: var(--color-clay);
+  --color-accent-foreground: var(--color-clay-foreground);
+  --color-border: #d7c7ac;
+  --color-input: #dccbb0;
+  --color-ring: var(--color-clay);
+  --color-destructive: var(--color-danger);
+  --color-destructive-foreground: var(--color-danger-foreground);
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+  --radius-2xl: 2.5rem;
+
+  --shadow-soft: 0 18px 60px rgb(36 33 28 / 0.12);
+  --shadow-panel: 0 1px 0 rgb(255 255 255 / 0.65) inset,
+    0 24px 80px rgb(68 53 31 / 0.16);
 }
 
-html,
-body {
-  @apply bg-white dark:bg-gray-950;
+@layer base {
+  :root {
+    color-scheme: light;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-feature-settings: "liga" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
+  }
 
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
+  html {
+    min-height: 100%;
+    background:
+      radial-gradient(circle at 15% 10%, rgb(216 151 60 / 0.18), transparent 30rem),
+      radial-gradient(circle at 85% 0%, rgb(72 104 126 / 0.14), transparent 28rem),
+      var(--color-background);
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    background:
+      linear-gradient(135deg, rgb(255 250 241 / 0.94), rgb(244 234 217 / 0.86)),
+      var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  body::before {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+    background-image:
+      linear-gradient(rgb(36 33 28 / 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(36 33 28 / 0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: linear-gradient(to bottom, black, transparent 78%);
+  }
+
+  ::selection {
+    background: rgb(181 96 63 / 0.28);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 3px;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
   }
 }
