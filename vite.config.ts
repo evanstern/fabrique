@@ -5,7 +5,6 @@ import { defineConfig } from "vite";
 const allowedHosts = [
   "localhost",
   "dev-fabrique.infinitynode.ai",
-  ".fabrique.infinitynode.ai",
   ...(process.env.FABRIQUE_ALLOWED_HOSTS ?? "")
     .split(",")
     .map((host) => host.trim())

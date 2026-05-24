@@ -84,10 +84,11 @@ scripts/preview-clean [--older-than-days N]
 54-character maximum so `<slug>-fabrique` remains one valid DNS label,
 allocates a stable port from `5300-5399`, writes a systemd user service named
 `fabrique-preview-<slug>`, and runs this command from the feature
-worktree:
+worktree, resolving `pnpm` to an absolute path before writing the
+systemd unit so the service does not depend on an interactive shell PATH:
 
 ```bash
-pnpm exec react-router dev --host 0.0.0.0 --port <port>
+/path/to/pnpm exec react-router dev --host 0.0.0.0 --port <port>
 ```
 
 The service loads `<worktree>/.env` when present and sets these preview
@@ -117,7 +118,11 @@ their registered port. `preview-stop` is idempotent: it tolerates a
 missing registry entry, missing unit file, or already-stopped service.
 `preview-clean` removes stale entries when the registered worktree no
 longer exists, the systemd unit no longer exists, or an optional age
-threshold is exceeded.
+threshold is exceeded. Service-existence checks require a reachable
+`systemd --user`; if it is unavailable, the command warns and skips only
+that class of reconciliation. The age threshold uses GNU `date` for UTC
+timestamp parsing and exits with an error if a registry timestamp cannot
+be parsed.
 
 ### Host routing
 
@@ -158,11 +163,13 @@ cloudflared tunnel route dns <tunnel-id> 0024-hot-reload-branch-previews-fabriqu
 
 ### Vite host policy
 
-Vite is configured with explicit allowed hosts plus the controlled
-project-owned suffix `.fabrique.infinitynode.ai`. That suffix allows
-`dev-fabrique.infinitynode.ai` and feature preview hostnames while
-avoiding `allowedHosts: true`, which Vite documents as unsafe because it
-can expose the dev server to DNS rebinding.
+Vite is configured with explicit allowed hosts: `localhost`,
+`dev-fabrique.infinitynode.ai`, and any comma-separated hosts provided by
+`FABRIQUE_ALLOWED_HOSTS`. `preview-start` injects the preview hostname
+through that environment variable for the generated systemd unit. This
+keeps host access explicit while avoiding `allowedHosts: true`, which
+Vite documents as unsafe because it can expose the dev server to DNS
+rebinding.
 
 ### Coda feature lifecycle
 

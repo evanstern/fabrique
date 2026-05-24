@@ -35,6 +35,12 @@ fi
 
 now_epoch="$(date -u '+%s')"
 mapfile -t slugs < <(jq -r 'keys[]' "${registry}")
+systemd_user_available=false
+if preview_have_systemd_user; then
+  systemd_user_available=true
+else
+  printf 'warning: systemd --user is unavailable; service-existence checks will be skipped\n' >&2
+fi
 
 removed=0
 for slug in "${slugs[@]}"; do
@@ -45,10 +51,14 @@ for slug in "${slugs[@]}"; do
 
   if [[ -z "${worktree}" || ! -d "${worktree}" ]]; then
     reason="worktree missing"
-  elif preview_have_systemd_user && ! preview_systemctl list-unit-files "${service_name}.service" --no-legend 2>/dev/null | grep -q "${service_name}.service"; then
+  elif ${systemd_user_available} && ! preview_systemctl list-unit-files "${service_name}.service" --no-legend 2>/dev/null | grep -q "${service_name}.service"; then
     reason="systemd service missing"
   elif [[ -n "${older_than_days}" && -n "${updated_at}" ]]; then
-    updated_epoch="$(date -u -d "${updated_at}" '+%s' 2>/dev/null || printf '%s' "${now_epoch}")"
+    if ! updated_epoch="$(date -u -d "${updated_at}" '+%s' 2>/dev/null)"; then
+      printf 'error: could not parse updated_at for %s: %s\n' "${slug}" "${updated_at}" >&2
+      printf 'GNU date is required for --older-than-days timestamp parsing on this host.\n' >&2
+      exit 1
+    fi
     max_age=$((older_than_days * 24 * 60 * 60))
     if (( now_epoch - updated_epoch > max_age )); then
       reason="older than ${older_than_days} day(s)"
