@@ -209,77 +209,122 @@ export default function SessionPage({
 
   const showingInitialProgress =
     initialSubmitState.status === "submitting" && !live.interrupt;
+  const previewInterrupt =
+    live.stage !== "published" &&
+    live.stage === "preview_ready" &&
+    live.interrupt &&
+    live.interrupt.kind === "review_preview"
+      ? live.interrupt
+      : null;
+  const previewArtifactId = session.records.previews.at(-1)?.artifact_id ?? null;
 
   return (
-    <main className="min-h-screen px-6 py-12 text-foreground">
-      <div className="max-w-2xl mx-auto space-y-8">
-        <header className="space-y-1">
-          <div className="flex items-start justify-between">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              fabrique session
-            </p>
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="text-xs text-muted-foreground underline"
-              >
-                Sign out
-              </button>
-            </form>
+    <main className="min-h-screen px-4 py-4 text-foreground sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl flex-col overflow-hidden rounded-3xl border border-border bg-panel shadow-ambient lg:grid lg:grid-cols-[minmax(22rem,0.9fr)_minmax(0,1.35fr)]">
+        <section className="flex min-h-[36rem] flex-col border-b border-border bg-sidebar text-sidebar-foreground lg:border-b-0 lg:border-r">
+          <header className="border-b border-border px-5 py-5 sm:px-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                  fabrique session
+                </p>
+                <h1 className="mt-2 max-w-sm truncate font-serif text-3xl font-light tracking-tight">
+                  {session.session_id}
+                </h1>
+              </div>
+              <form action="/logout" method="post">
+                <button
+                  type="submit"
+                  className="rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition hover:border-ring hover:text-foreground"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
+              <span className="size-2 rounded-full bg-accent" />
+              stage: {live.stage}
+            </div>
+          </header>
+
+          <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+            <ChatMessage eyebrow="Brief" tone="neutral">
+              <Brief session={session} />
+            </ChatMessage>
+
+            {showingInitialProgress ? (
+              <ChatMessage eyebrow="Fabrique" tone="warning">
+                <ClarificationSkeleton
+                  progress={progress}
+                  title="Starting your brief"
+                />
+              </ChatMessage>
+            ) : null}
+
+            {initialSubmitState.status === "error" ? (
+              <ChatMessage eyebrow="Needs attention" tone="danger">
+                <InitialSubmitError message={initialSubmitState.message} />
+              </ChatMessage>
+            ) : null}
+
+            {live.interrupt && live.interrupt.kind === "answer_clarification" ? (
+              <ChatMessage eyebrow="Clarification" tone="warning">
+                {submitting ? (
+                  <ClarificationSkeleton progress={progress} />
+                ) : (
+                  <Clarification
+                    questions={live.interrupt.questions}
+                    submitting={submitting}
+                    error={
+                      actionData && "error" in actionData ? actionData.error : null
+                    }
+                  />
+                )}
+              </ChatMessage>
+            ) : null}
+
+            {previewInterrupt ? (
+              <ChatMessage eyebrow="Review" tone="info">
+                <PreviewDecision
+                  targetPreviewId={previewInterrupt.target_preview_id}
+                  submitting={submitting}
+                  error={
+                    actionData && "error" in actionData ? actionData.error : null
+                  }
+                />
+              </ChatMessage>
+            ) : null}
+
+            {live.stage === "published" && published ? (
+              <ChatMessage eyebrow="Published" tone="success">
+                <Published
+                  sessionId={session.session_id}
+                  artifactUrl={published.artifact.access.url}
+                />
+              </ChatMessage>
+            ) : null}
+
+            {!showingInitialProgress && !live.interrupt && live.stage === "briefing" ? (
+              <ChatMessage eyebrow="Next" tone="success">
+                <ReadyForDesign />
+              </ChatMessage>
+            ) : null}
           </div>
-          <h1 className="text-2xl font-light tracking-tight">
-            {session.session_id}
-          </h1>
-          <p className="text-sm text-muted-foreground">stage: {live.stage}</p>
-        </header>
+        </section>
 
-        <Brief session={session} />
-
-        {showingInitialProgress ? (
-          <ClarificationSkeleton progress={progress} title="Starting your brief" />
-        ) : null}
-
-        {initialSubmitState.status === "error" ? (
-          <InitialSubmitError message={initialSubmitState.message} />
-        ) : null}
-
-        {live.interrupt && live.interrupt.kind === "answer_clarification" ? (
-          submitting ? (
-            <ClarificationSkeleton progress={progress} />
-          ) : (
-            <Clarification
-              questions={live.interrupt.questions}
-              submitting={submitting}
-              error={actionData && "error" in actionData ? actionData.error : null}
+        <aside className="flex min-h-[32rem] flex-col bg-preview text-preview-foreground">
+          {previewInterrupt ? (
+            <PreviewPane
+              sessionId={session.session_id}
+              targetPreviewId={previewInterrupt.target_preview_id}
+              artifactId={previewArtifactId}
             />
-          )
-        ) : null}
-
-        {live.stage === "published" && published ? (
-          <Published
-            sessionId={session.session_id}
-            artifactUrl={published.artifact.access.url}
-          />
-        ) : null}
-
-        {live.stage !== "published" &&
-        live.stage === "preview_ready" &&
-        live.interrupt &&
-        live.interrupt.kind === "review_preview" ? (
-          <PreviewReview
-            sessionId={session.session_id}
-            targetPreviewId={live.interrupt.target_preview_id}
-            artifactId={
-              session.records.previews.at(-1)?.artifact_id ?? null
-            }
-            submitting={submitting}
-            error={actionData && "error" in actionData ? actionData.error : null}
-          />
-        ) : null}
-
-        {!showingInitialProgress && !live.interrupt && live.stage === "briefing" ? (
-          <ReadyForDesign />
-        ) : null}
+          ) : live.stage === "published" && published ? (
+            <PublishedPreview artifactUrl={published.artifact.access.url} />
+          ) : (
+            <PreviewPlaceholder stage={live.stage} />
+          )}
+        </aside>
       </div>
     </main>
   );
@@ -293,16 +338,13 @@ function Published({
   artifactUrl: string;
 }) {
   return (
-    <section className="space-y-3 rounded-md border border-moss/35 bg-moss/10 p-4 text-foreground">
-      <h2 className="text-sm uppercase tracking-wider text-moss">
-        Published
-      </h2>
+    <section className="space-y-3 text-foreground">
       <p className="text-base break-all font-mono">{artifactUrl}</p>
       <a
         href={artifactUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-block rounded-md bg-moss px-4 py-2 text-sm font-medium text-moss-foreground"
+        className="inline-block rounded-full bg-success px-4 py-2 text-sm font-semibold text-success-foreground transition hover:bg-success/90"
       >
         View in new tab
       </a>
@@ -318,10 +360,9 @@ function Published({
 function Brief({ session }: { session: Route.ComponentProps["loaderData"]["session"] }) {
   const b = session.brief;
   return (
-    <section className="space-y-4 rounded-md border border-border bg-card p-4 text-card-foreground">
-      <h2 className="text-sm uppercase tracking-wider text-muted-foreground">Brief</h2>
+    <section className="space-y-4 text-card-foreground">
       {b.summary ? (
-        <p className="text-base">{b.summary}</p>
+        <p className="text-base leading-7">{b.summary}</p>
       ) : (
         <p className="text-sm text-muted-foreground italic">No summary yet.</p>
       )}
@@ -363,19 +404,20 @@ function Clarification({
   error: string | null | undefined;
 }) {
   return (
-    <section className="space-y-4 rounded-md border border-signal/35 bg-signal/10 p-4 text-foreground">
-      <h2 className="text-sm uppercase tracking-wider text-clay">
-        A few questions
-      </h2>
+    <section className="space-y-4 text-foreground">
+      <p className="text-sm leading-6 text-muted-foreground">
+        A few details would make the page brief stronger before design begins.
+      </p>
       <Form method="post" className="space-y-4">
         {questions.map((q, i) => (
-          <div key={i} className="space-y-1">
+          <div key={i} className="space-y-2">
             <label className="block text-sm font-medium">{q}</label>
             <input
               name={q}
               type="text"
               disabled={submitting}
-              className="w-full rounded-md border border-input bg-card p-2 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Type your answer here"
+              className="w-full rounded-lg border border-input bg-input-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/35"
             />
           </div>
         ))}
@@ -383,7 +425,7 @@ function Clarification({
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50"
+          className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:bg-accent/90 disabled:opacity-50"
         >
           {submitting ? "Sending..." : "Send answers"}
         </button>
@@ -411,19 +453,17 @@ function ClarificationSkeleton({
   const ellipsis = ".".repeat(dots);
 
   return (
-    <section className="space-y-3 rounded-md border border-signal/35 bg-signal/10 p-4 text-foreground">
-      <h2 className="text-sm uppercase tracking-wider text-clay">
-        {title}
-      </h2>
+    <section className="space-y-3 text-foreground">
+      <h2 className="text-sm font-medium">{title}</h2>
       <p className="text-base text-foreground">
         {label}
         {ellipsis}
       </p>
       <div className="space-y-2 pt-2">
-        <div className="h-4 w-3/4 rounded bg-signal/25 animate-pulse" />
-        <div className="h-9 w-full rounded bg-signal/25 animate-pulse" />
-        <div className="h-4 w-2/3 rounded bg-signal/25 animate-pulse" />
-        <div className="h-9 w-full rounded bg-signal/25 animate-pulse" />
+        <div className="h-4 w-3/4 animate-pulse rounded bg-warning/25" />
+        <div className="h-9 w-full animate-pulse rounded bg-warning/20" />
+        <div className="h-4 w-2/3 animate-pulse rounded bg-warning/25" />
+        <div className="h-9 w-full animate-pulse rounded bg-warning/20" />
       </div>
     </section>
   );
@@ -431,58 +471,30 @@ function ClarificationSkeleton({
 
 function InitialSubmitError({ message }: { message: string }) {
   return (
-    <section className="space-y-2 rounded-md border border-destructive/35 bg-destructive/10 p-4">
-      <h2 className="text-sm uppercase tracking-wider text-destructive">
-        Brief did not start
-      </h2>
+    <section className="space-y-2">
+      <h2 className="text-sm font-medium text-destructive">Brief did not start</h2>
       <p className="text-sm text-foreground">{message}</p>
     </section>
   );
 }
 
-function PreviewReview({
-  sessionId,
+function PreviewDecision({
   targetPreviewId,
-  artifactId,
   submitting,
   error,
 }: {
-  sessionId: string;
   targetPreviewId: string;
-  artifactId: string | null;
   submitting: boolean;
   error: string | null | undefined;
 }) {
-  const url = artifactId ? `/artifacts/${sessionId}/${artifactId}` : null;
   return (
-    <section className="space-y-4 rounded-md border border-skyline/35 bg-skyline/10 p-4 text-foreground">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm uppercase tracking-wider text-skyline">
-          Review preview {targetPreviewId}
-        </h2>
-        {url ? (
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs text-skyline underline"
-          >
-            Open in new tab
-          </a>
-        ) : null}
-      </div>
-      {url ? (
-        <iframe
-          src={url}
-          sandbox=""
-          title={`preview ${targetPreviewId}`}
-          className="w-full h-[600px] rounded border border-border bg-card"
-        />
-      ) : (
-        <p className="text-sm text-muted-foreground italic">No artifact attached.</p>
-      )}
+    <section className="space-y-4 text-foreground">
+      <p className="text-sm leading-6 text-muted-foreground">
+        Preview {targetPreviewId} is ready on the right. Approve it or leave one
+        revision note per line.
+      </p>
       <Form method="post" className="space-y-3">
-        <div className="space-y-1">
+        <div className="space-y-2">
           <label htmlFor="notes" className="block text-sm font-medium">
             Notes (one per line)
           </label>
@@ -491,17 +503,18 @@ function PreviewReview({
             name="notes"
             rows={4}
             disabled={submitting}
-            className="w-full rounded-md border border-input bg-card p-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Increase contrast on the hero button\nMake the headline warmer"
+            className="w-full resize-none rounded-lg border border-input bg-input-background p-3 text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/35"
           />
         </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <button
             type="submit"
             name="action"
             value="revise"
             disabled={submitting}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50"
+            className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:bg-accent/90 disabled:opacity-50"
           >
             {submitting ? "Sending..." : "Revise"}
           </button>
@@ -510,7 +523,7 @@ function PreviewReview({
             name="action"
             value="approve"
             disabled={submitting}
-            className="rounded-md bg-moss px-4 py-2 text-sm font-medium text-moss-foreground disabled:opacity-50"
+            className="rounded-full bg-success px-4 py-2 text-sm font-semibold text-success-foreground transition hover:bg-success/90 disabled:opacity-50"
           >
             {submitting ? "Sending..." : "Approve"}
           </button>
@@ -522,14 +535,151 @@ function PreviewReview({
 
 function ReadyForDesign() {
   return (
-    <section className="rounded-md border border-moss/35 bg-moss/10 p-4 text-foreground">
-      <h2 className="text-sm uppercase tracking-wider text-moss">
-        Ready to design
-      </h2>
+    <section className="text-foreground">
+      <h2 className="text-sm font-medium">Ready to design</h2>
       <p className="text-sm mt-1">
         The brief is good enough to start designing. Preview generation arrives
         in the next slice.
       </p>
+    </section>
+  );
+}
+
+type MessageTone = "neutral" | "warning" | "danger" | "info" | "success";
+
+function ChatMessage({
+  eyebrow,
+  tone,
+  children,
+}: {
+  eyebrow: string;
+  tone: MessageTone;
+  children: React.ReactNode;
+}) {
+  const toneClass = {
+    neutral: "border-border bg-card",
+    warning: "border-warning/35 bg-warning/10",
+    danger: "border-destructive/35 bg-destructive/10",
+    info: "border-info/35 bg-info/10",
+    success: "border-success/35 bg-success/10",
+  }[tone];
+
+  return (
+    <article className={`space-y-3 rounded-2xl border p-4 shadow-soft ${toneClass}`}>
+      <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+        {eyebrow}
+      </p>
+      {children}
+    </article>
+  );
+}
+
+function PreviewPane({
+  sessionId,
+  targetPreviewId,
+  artifactId,
+}: {
+  sessionId: string;
+  targetPreviewId: string;
+  artifactId: string | null;
+}) {
+  const url = artifactId ? `/artifacts/${sessionId}/${artifactId}` : null;
+  return (
+    <section className="flex min-h-full flex-1 flex-col">
+      <div className="flex flex-col gap-3 border-b border-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+            live preview
+          </p>
+          <h2 className="mt-2 font-serif text-3xl font-light tracking-tight">
+            Preview {targetPreviewId}
+          </h2>
+        </div>
+        {url ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition hover:border-ring"
+          >
+            Open in new tab
+          </a>
+        ) : null}
+      </div>
+      <div className="flex-1 bg-panel-muted p-3 sm:p-5">
+        {url ? (
+          <iframe
+            src={url}
+            sandbox=""
+            title={`preview ${targetPreviewId}`}
+            className="h-[68vh] min-h-[34rem] w-full rounded-2xl border border-border bg-card shadow-panel"
+          />
+        ) : (
+          <div className="flex h-full min-h-[28rem] items-center justify-center rounded-2xl border border-dashed border-border bg-card p-8 text-center text-muted-foreground">
+            No artifact is attached to this preview yet.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PublishedPreview({ artifactUrl }: { artifactUrl: string }) {
+  return (
+    <section className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+      <div className="max-w-md space-y-4 rounded-3xl border border-success/35 bg-success/10 p-8 shadow-soft">
+        <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+          published page
+        </p>
+        <h2 className="font-serif text-4xl font-light tracking-tight">
+          Your page is live.
+        </h2>
+        <p className="break-all font-mono text-sm text-muted-foreground">
+          {artifactUrl}
+        </p>
+        <a
+          href={artifactUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block rounded-full bg-success px-5 py-3 text-sm font-semibold text-success-foreground transition hover:bg-success/90"
+        >
+          View published page
+        </a>
+      </div>
+    </section>
+  );
+}
+
+function PreviewPlaceholder({ stage }: { stage: string }) {
+  return (
+    <section className="flex flex-1 flex-col">
+      <div className="border-b border-border px-5 py-5 sm:px-6">
+        <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+          preview workspace
+        </p>
+        <h2 className="mt-2 font-serif text-3xl font-light tracking-tight">
+          The canvas will appear here.
+        </h2>
+      </div>
+      <div className="flex flex-1 items-center justify-center bg-panel-muted p-5">
+        <div className="w-full max-w-xl rounded-3xl border border-dashed border-border bg-card p-8 text-center shadow-soft">
+          <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+            current stage: {stage}
+          </p>
+          <div className="mx-auto mt-8 grid max-w-sm gap-3 text-left">
+            <div className="h-5 w-3/4 rounded-full bg-muted" />
+            <div className="h-24 rounded-2xl bg-muted" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="h-20 rounded-2xl bg-muted" />
+              <div className="h-20 rounded-2xl bg-muted" />
+            </div>
+          </div>
+          <p className="mt-8 text-sm leading-6 text-muted-foreground">
+            Keep answering on the left. Generated previews and published pages
+            stay anchored here for review.
+          </p>
+        </div>
+      </div>
     </section>
   );
 }
