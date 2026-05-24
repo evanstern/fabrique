@@ -1,8 +1,6 @@
 import { redirect, Form, useNavigation } from "react-router";
 import type { Route } from "./+types/home";
-import { createSession, setRawInput } from "@sessions";
-import { getGraph } from "@graph";
-import { publishSnapshot } from "@stream";
+import { createSession } from "@sessions";
 import { requireAuth } from "@auth";
 
 export function meta(_args: Route.MetaArgs) {
@@ -26,16 +24,8 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const session = await createSession();
-  await setRawInput(session.session_id, raw_input);
-
-  const graph = await getGraph();
-  await graph.invoke(
-    { session_id: session.session_id, raw_input },
-    { configurable: { thread_id: session.session_id } },
-  );
-  await publishSnapshot(session.session_id);
-
-  return redirect(`/s/${session.session_id}`);
+  const params = new URLSearchParams({ initial_brief: raw_input });
+  return redirect(`/s/${session.session_id}?${params.toString()}`);
 }
 
 export default function Home({ actionData }: Route.ComponentProps) {
