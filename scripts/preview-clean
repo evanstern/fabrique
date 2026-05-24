@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib/preview-common.sh"
+
+usage() {
+  printf 'usage: %s [--older-than-days N]\n' "$(basename "$0")" >&2
+}
+
+older_than_days=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --older-than-days)
+      if [[ $# -lt 2 || ! "$2" =~ ^[0-9]+$ ]]; then
+        usage
+        exit 2
+      fi
+      older_than_days="$2"
+      shift 2
+      ;;
+    *)
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+preview_require_jq
+registry="$(preview_registry_path)"
+if [[ ! -f "${registry}" ]]; then
+  printf 'no previews registered (registry not found: %s)\n' "${registry}"
+  exit 0
+fi
+
+now_epoch="$(date -u '+%s')"
+mapfile -t slugs < <(jq -r 'keys[]' "${registry}")
+
+removed=0
+for slug in "${slugs[@]}"; do
+  worktree="$(jq -r --arg slug "${slug}" '.[$slug].worktree // empty' "${registry}")"
+  service_name="$(jq -r --arg slug "${slug}" '.[$slug].service_name // empty' "${registry}")"
+  updated_at="$(jq -r --arg slug "${slug}" '.[$slug].updated_at // empty' "${registry}")"
+  reason=""
+
+  if [[ -z "${worktree}" || ! -d "${worktree}" ]]; then
+    reason="worktree missing"
+  elif preview_have_systemd_user && ! preview_systemctl list-unit-files "${service_name}.service" --no-legend 2>/dev/null | grep -q "${service_name}.service"; then
+    reason="systemd service missing"
+  elif [[ -n "${older_than_days}" && -n "${updated_at}" ]]; then
+    updated_epoch="$(date -u -d "${updated_at}" '+%s' 2>/dev/null || printf '%s' "${now_epoch}")"
+    max_age=$((older_than_days * 24 * 60 * 60))
+    if (( now_epoch - updated_epoch > max_age )); then
+      reason="older than ${older_than_days} day(s)"
+    fi
+  fi
+
+  if [[ -n "${reason}" ]]; then
+    printf 'cleaning %s: %s\n' "${slug}" "${reason}"
+    "${SCRIPT_DIR}/preview-stop" "${slug}"
+    removed=$((removed + 1))
+  fi
+done
+
+if [[ "${removed}" -eq 0 ]]; then
+  printf 'no stale previews found\n'
+fi

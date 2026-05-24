@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib/preview-common.sh"
+
+if [[ $# -ne 1 ]]; then
+  printf 'usage: %s <slug>\n' "$(basename "$0")" >&2
+  exit 2
+fi
+
+slug="$1"
+preview_validate_slug "${slug}"
+preview_require_jq
+
+registry="$(preview_registry_path)"
+service_name="$(preview_service_name "${slug}")"
+unit_path="$(preview_unit_path "${slug}")"
+
+if preview_have_systemd_user; then
+  if preview_systemctl list-unit-files "${service_name}.service" --no-legend 2>/dev/null | grep -q "${service_name}.service"; then
+    preview_systemctl disable --now "${service_name}.service" || true
+    printf 'stopped %s.service\n' "${service_name}"
+  else
+    printf 'service already absent: %s.service\n' "${service_name}"
+  fi
+else
+  printf 'systemd --user unavailable; skipped live stop for %s.service\n' "${service_name}" >&2
+fi
+
+if [[ -f "${unit_path}" ]]; then
+  rm -f "${unit_path}"
+  printf 'removed unit: %s\n' "${unit_path}"
+else
+  printf 'unit already absent: %s\n' "${unit_path}"
+fi
+
+if preview_have_systemd_user; then
+  preview_systemctl daemon-reload
+fi
+
+if [[ -f "${registry}" ]]; then
+  if preview_read_registry "${registry}" | jq -e --arg slug "${slug}" 'has($slug)' >/dev/null; then
+    port="$(preview_read_registry "${registry}" | jq -r --arg slug "${slug}" '.[$slug].port')"
+    tmp="$(mktemp "${registry}.tmp.XXXXXX")"
+    preview_read_registry "${registry}" | jq --arg slug "${slug}" 'del(.[$slug])' >"${tmp}"
+    mv "${tmp}" "${registry}"
+    printf 'removed registry entry: %s\n' "${slug}"
+    cat <<EOF
+Remove host-local routing for ${slug} if it was added:
+  - Traefik router/service: fabrique-preview-${slug}
+  - cloudflared hostname: $(preview_hostname "${slug}")
+  - local target port was: ${port}
+EOF
+  else
+    printf 'registry entry already absent: %s\n' "${slug}"
+  fi
+else
+  printf 'registry already absent: %s\n' "${registry}"
+fi
