@@ -3,8 +3,8 @@
 @theme {
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-serif: "Fraunces", ui-serif, Georgia, Cambria, "Times New Roman", Times,
-    serif;
+  --font-serif: "IBM Plex Serif", ui-serif, Georgia, Cambria, "Times New Roman",
+    Times, serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas,
     "Liberation Mono", monospace;
 
@@ -202,6 +202,24 @@
       var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
   }
 
   body::before {
