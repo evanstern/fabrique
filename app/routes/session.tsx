@@ -17,13 +17,19 @@ export function meta({ params }: Route.MetaArgs) {
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   requireAuth(request);
+  const url = new URL(request.url);
   const session = await getSession(params.id);
   if (!session) {
     throw new Response("session not found", { status: 404 });
   }
   const interrupt = await getPendingInterrupt(params.id);
   const published = getPublishedPreview(session);
-  return { session, interrupt, published };
+  return {
+    session,
+    interrupt,
+    published,
+    initialBrief: url.searchParams.get("initial_brief"),
+  };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -96,6 +102,14 @@ type ProgressState = {
   tick?: number;
 };
 
+type InitialSubmitState =
+  | { status: "idle" }
+  | { status: "submitting" }
+  | { status: "submitted" }
+  | { status: "error"; message: string };
+
+const startedInitialSubmissions = new Set<string>();
+
 function phaseLabel(phase: string | null): string {
   if (phase === "refining_brief") return "Refining your brief";
   if (phase === "checking_readiness")
@@ -107,7 +121,8 @@ export default function SessionPage({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const { session, interrupt: initialInterrupt, published } = loaderData;
+  const { session, interrupt: initialInterrupt, published, initialBrief } =
+    loaderData;
   const navigation = useNavigation();
   const submitting = navigation.state === "submitting";
 
@@ -116,6 +131,8 @@ export default function SessionPage({
     interrupt: initialInterrupt,
   });
   const [progress, setProgress] = useState<ProgressState | null>(null);
+  const [initialSubmitState, setInitialSubmitState] =
+    useState<InitialSubmitState>({ status: "idle" });
 
   useEffect(() => {
     const es = new EventSource(`/api/sessions/${session.session_id}/stream`);
@@ -148,6 +165,51 @@ export default function SessionPage({
     }
   }, [submitting]);
 
+  useEffect(() => {
+    if (!initialBrief) return;
+
+    const cleanUrl = `${location.pathname}${location.hash}`;
+    window.history.replaceState(null, "", cleanUrl);
+
+    const initialSubmitKey = `${session.session_id}:${initialBrief}`;
+    if (startedInitialSubmissions.has(initialSubmitKey)) return;
+
+    startedInitialSubmissions.add(initialSubmitKey);
+    setInitialSubmitState({ status: "submitting" });
+    setProgress({
+      node: "ingest_brief",
+      phase: "refining_brief",
+      status: "started",
+    });
+
+    void fetch(`/api/sessions/${session.session_id}/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "submit_brief", raw_input: initialBrief }),
+    }).then(async (response) => {
+      if (!response.ok) {
+        let message = "Could not start the brief. Please try again.";
+        const body = (await response.json().catch(() => null)) as {
+          error?: unknown;
+        } | null;
+        if (body) {
+          if (typeof body.error === "string") message = body.error;
+        }
+        setInitialSubmitState({ status: "error", message });
+        return;
+      }
+      setInitialSubmitState({ status: "submitted" });
+    }, () => {
+      setInitialSubmitState({
+        status: "error",
+        message: "Could not start the brief. Please try again.",
+      });
+    });
+  }, [initialBrief, session.session_id]);
+
+  const showingInitialProgress =
+    initialSubmitState.status === "submitting" && !live.interrupt;
+
   return (
     <main className="min-h-screen px-6 py-12">
       <div className="max-w-2xl mx-auto space-y-8">
@@ -172,6 +234,14 @@ export default function SessionPage({
         </header>
 
         <Brief session={session} />
+
+        {showingInitialProgress ? (
+          <ClarificationSkeleton progress={progress} title="Starting your brief" />
+        ) : null}
+
+        {initialSubmitState.status === "error" ? (
+          <InitialSubmitError message={initialSubmitState.message} />
+        ) : null}
 
         {live.interrupt && live.interrupt.kind === "answer_clarification" ? (
           submitting ? (
@@ -207,7 +277,7 @@ export default function SessionPage({
           />
         ) : null}
 
-        {!live.interrupt && live.stage === "briefing" ? (
+        {!showingInitialProgress && !live.interrupt && live.stage === "briefing" ? (
           <ReadyForDesign />
         ) : null}
       </div>
@@ -324,8 +394,10 @@ function Clarification({
 
 function ClarificationSkeleton({
   progress,
+  title = "Thinking about your answers",
 }: {
   progress: ProgressState | null;
+  title?: string;
 }) {
   const [dots, setDots] = useState(1);
   useEffect(() => {
@@ -341,7 +413,7 @@ function ClarificationSkeleton({
   return (
     <section className="space-y-3 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4">
       <h2 className="text-sm uppercase tracking-wider text-amber-800 dark:text-amber-300">
-        Thinking about your answers
+        {title}
       </h2>
       <p className="text-base text-amber-900 dark:text-amber-200">
         {label}
@@ -353,6 +425,17 @@ function ClarificationSkeleton({
         <div className="h-4 w-2/3 rounded bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
         <div className="h-9 w-full rounded bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
       </div>
+    </section>
+  );
+}
+
+function InitialSubmitError({ message }: { message: string }) {
+  return (
+    <section className="space-y-2 rounded-md border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-4">
+      <h2 className="text-sm uppercase tracking-wider text-red-800 dark:text-red-300">
+        Brief did not start
+      </h2>
+      <p className="text-sm text-red-700 dark:text-red-200">{message}</p>
     </section>
   );
 }

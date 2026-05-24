@@ -15,9 +15,6 @@ const allowedHosts = [
 export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
   server: {
-    allowedHosts: ["dev-fabrique.infinitynode.ai", "localhost"],
-  },
-  server: {
     allowedHosts: Array.from(new Set(allowedHosts)),
   },
 });
