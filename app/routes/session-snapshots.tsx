@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Route } from "./+types/session-snapshots";
 import { requireAuth } from "@auth";
 import { getPendingInterrupt } from "@graph";
@@ -60,6 +61,9 @@ function buildSnapshotPoints(
   interrupt: Awaited<ReturnType<typeof getPendingInterrupt>>,
   published: ReturnType<typeof getPublishedPreview>,
 ): SnapshotPoint[] {
+  const artifactsById = new Map(
+    session.records.artifacts.map((artifact) => [artifact.artifact_id, artifact]),
+  );
   const points: SnapshotPoint[] = [
     {
       id: `${session.session_id}:session`,
@@ -93,9 +97,7 @@ function buildSnapshotPoints(
   ];
 
   session.records.previews.forEach((preview, index) => {
-    const artifact = session.records.artifacts.find(
-      (candidate) => candidate.artifact_id === preview.artifact_id,
-    );
+    const artifact = artifactsById.get(preview.artifact_id);
     points.push({
       id: `${session.session_id}:preview:${preview.preview_id}`,
       kind: "preview",
@@ -314,6 +316,8 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
 }
 
 function SnapshotCard({ point, index }: { point: SnapshotPoint; index: number }) {
+  const [detailsJson, setDetailsJson] = useState<string | null>(null);
+
   return (
     <article className={`rounded-2xl border p-5 shadow-soft ${pointTone(point.kind)}`}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -359,12 +363,19 @@ function SnapshotCard({ point, index }: { point: SnapshotPoint; index: number })
         ))}
       </dl>
 
-      <details className="mt-5 rounded-lg border border-border bg-background/75">
+      <details
+        className="mt-5 rounded-lg border border-border bg-background/75"
+        onToggle={(event) => {
+          if (event.currentTarget.open && detailsJson === null) {
+            setDetailsJson(jsonDetails(point.details));
+          }
+        }}
+      >
         <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground transition hover:text-foreground">
           Raw JSON details
         </summary>
         <pre className="overflow-x-auto border-t border-border p-4 text-xs leading-5 text-foreground">
-          {jsonDetails(point.details)}
+          {detailsJson}
         </pre>
       </details>
     </article>
