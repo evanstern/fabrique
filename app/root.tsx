@@ -13,7 +13,7 @@ import "./app.css";
 const themeInitScript = `
 (() => {
   try {
-    const storedTheme = window.localStorage.getItem("theme");
+    const storedTheme = window.localStorage.getItem("fabrique-theme");
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light";

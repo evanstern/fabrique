@@ -22,7 +22,10 @@ function getStoredTheme(): ThemeMode | null {
 
 function applyTheme(theme: ThemeMode) {
   if (typeof document === "undefined") return;
-  document.documentElement.dataset.theme = theme;
+  const root = document.documentElement;
+  root.dataset.theme = theme;
+  root.classList.toggle("dark", theme === "dark");
+  root.style.colorScheme = theme;
 }
 
 export function useThemeMode() {

@@ -60,6 +60,7 @@ export function verifyAuthCookie(value: string | undefined): boolean {
 }
 
 function cookieSecurityAttribute(): string {
+  if (process.env.NODE_ENV !== "production") return "";
   return process.env.PUBLIC_URL?.startsWith("http://") ? "" : "; Secure";
 }
 
