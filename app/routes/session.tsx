@@ -2,7 +2,9 @@ import { useNavigation } from "react-router";
 import type { Route } from "./+types/session";
 import { Command } from "@langchain/langgraph";
 import { getPublishedPreview, getSession, setRawInput } from "@sessions";
+import { appendClarification } from "@sessions";
 import { getGraph, getPendingInterrupt } from "@graph";
+import { nextSequentialId } from "@records";
 import { publishSnapshot } from "@stream";
 import { requireAuth } from "@auth";
 import { Brief } from "~/components/fabrique/session/brief";
@@ -56,28 +58,8 @@ export async function action({ request, params }: Route.ActionArgs) {
     throw new Response("session not found", { status: 404 });
   }
   const pending = await getPendingInterrupt(params.id);
-  if (!pending) {
-    return { error: "Nothing is pending input right now." };
-  }
-
   const form = await request.formData();
   const graph = await getGraph();
-
-  if (pending.kind === "answer_clarification") {
-    const answers: Record<string, string> = {};
-    for (const q of pending.questions) {
-      const v = String(form.get(q) ?? "").trim();
-      if (v !== "") answers[q] = v;
-    }
-    if (Object.keys(answers).length === 0) {
-      return { error: "Please answer at least one question." };
-    }
-    await graph.invoke(new Command({ resume: answers }), {
-      configurable: { thread_id: params.id },
-    });
-    await publishSnapshot(params.id);
-    return { ok: true };
-  }
 
   if (
     session.stage === "briefing" &&
@@ -94,11 +76,51 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
 
     const raw_input = `${session.brief.raw_input}\n\n${formatClarificationAnswers(answers)}`;
+    await appendClarification(session.session_id, {
+      clarification_id: nextSequentialId(
+        "clarification",
+        session.records.clarifications?.length ?? 0,
+      ),
+      context: "brief",
+      questions: session.brief.open_questions,
+      answers,
+      created_at: new Date(),
+    });
     await setRawInput(session.session_id, raw_input);
     await graph.invoke(
       { session_id: session.session_id, raw_input },
       { configurable: { thread_id: session.session_id } },
     );
+    await publishSnapshot(params.id);
+    return { ok: true };
+  }
+
+  if (!pending) {
+    return { error: "Nothing is pending input right now." };
+  }
+
+  if (pending.kind === "answer_clarification") {
+    const answers: Record<string, string> = {};
+    for (const q of pending.questions) {
+      const v = String(form.get(q) ?? "").trim();
+      if (v !== "") answers[q] = v;
+    }
+    if (Object.keys(answers).length === 0) {
+      return { error: "Please answer at least one question." };
+    }
+    await appendClarification(session.session_id, {
+      clarification_id: nextSequentialId(
+        "clarification",
+        session.records.clarifications?.length ?? 0,
+      ),
+      context: liveStageForPending(session.stage, pending.kind),
+      questions: pending.questions,
+      answers,
+      created_at: new Date(),
+    });
+    await graph.invoke(new Command({ resume: answers }), {
+      configurable: { thread_id: params.id },
+    });
     await publishSnapshot(params.id);
     return { ok: true };
   }
@@ -129,6 +151,15 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   return { error: "Unhandled pending interrupt." };
+}
+
+function liveStageForPending(
+  stage: string,
+  kind: "answer_clarification" | "review_preview",
+): "brief" | "revision" {
+  return stage === "preview_ready" && kind === "answer_clarification"
+    ? "revision"
+    : "brief";
 }
 
 
@@ -165,7 +196,9 @@ export default function SessionPage({
     live.interrupt.kind === "review_preview"
       ? live.interrupt
       : null;
-  const previewArtifactId = live.records.previews.at(-1)?.artifact_id ?? null;
+  const latestPreview = live.records.previews.at(-1) ?? null;
+  const previewArtifactId = latestPreview?.artifact_id ?? null;
+  const activePreviewId = previewInterrupt?.target_preview_id ?? latestPreview?.preview_id ?? null;
   const fallbackQuestions =
     live.stage === "briefing" &&
     !live.interrupt &&
@@ -274,6 +307,9 @@ export default function SessionPage({
                 ) : (
                   <Clarification
                     questions={live.interrupt.questions}
+                    context={
+                      live.stage === "preview_ready" ? "revision" : "brief"
+                    }
                     submitting={submitting}
                     error={
                       actionData && "error" in actionData ? actionData.error : null
@@ -290,6 +326,7 @@ export default function SessionPage({
                 ) : (
                   <Clarification
                     questions={fallbackQuestions}
+                    context="brief"
                     submitting={submitting}
                     error={
                       actionData && "error" in actionData ? actionData.error : null
@@ -341,10 +378,10 @@ export default function SessionPage({
         </section>
 
         <aside className="flex min-h-[32rem] flex-col bg-preview text-preview-foreground">
-          {previewInterrupt ? (
+          {live.stage === "preview_ready" && activePreviewId ? (
             <PreviewPane
               sessionId={session.session_id}
-              targetPreviewId={previewInterrupt.target_preview_id}
+              targetPreviewId={activePreviewId}
               artifactId={previewArtifactId}
             />
           ) : live.stage === "published" && published ? (

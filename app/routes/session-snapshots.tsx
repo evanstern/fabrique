@@ -6,6 +6,7 @@ import { getPublishedPreview, getSession, type Session } from "@sessions";
 
 type PointKind =
   | "session"
+  | "clarification"
   | "preview"
   | "review"
   | "published"
@@ -95,6 +96,29 @@ function buildSnapshotPoints(
       },
     },
   ];
+
+  (session.records.clarifications ?? []).forEach((clarification, index) => {
+    const timestamp = normalizeTimestamp(clarification.created_at);
+    points.push({
+      id: `${session.session_id}:clarification:${clarification.clarification_id}`,
+      kind: "clarification",
+      title:
+        clarification.context === "revision"
+          ? `Revision clarification ${clarification.clarification_id}`
+          : `Brief clarification ${clarification.clarification_id}`,
+      stage:
+        clarification.context === "revision" ? "preview_ready" : "briefing",
+      timestamp,
+      sequence: 50 + index,
+      summary: `${clarification.questions.length} question${clarification.questions.length === 1 ? "" : "s"} answered.`,
+      metadata: [
+        { label: "clarification", value: clarification.clarification_id },
+        { label: "context", value: clarification.context },
+        { label: "questions", value: String(clarification.questions.length) },
+      ],
+      details: { clarification },
+    });
+  });
 
   session.records.previews.forEach((preview, index) => {
     const artifact = artifactsById.get(preview.artifact_id);
@@ -217,6 +241,7 @@ function formatTimestamp(timestamp: string | null): string {
 function pointTone(kind: PointKind): string {
   return {
     session: "border-border bg-card",
+    clarification: "border-accent/35 bg-accent/10",
     preview: "border-info/35 bg-info/10",
     review: "border-warning/35 bg-warning/10",
     published: "border-success/35 bg-success/10",
