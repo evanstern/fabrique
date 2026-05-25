@@ -52,7 +52,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-          <section className="rounded-2xl border border-border bg-panel px-5 py-8 text-panel-foreground shadow-panel sm:px-8 sm:py-10 lg:px-10 lg:py-12">
+          <section className="px-0 py-4 sm:py-6 lg:py-8">
             <header className="max-w-3xl space-y-5">
               <p className="font-display-label text-xs font-medium uppercase tracking-[0.26em] text-muted-foreground">
                 page-making workspace
@@ -92,7 +92,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
             </Form>
           </section>
 
-          <aside className="rounded-2xl border border-border bg-sidebar text-sidebar-foreground shadow-soft lg:sticky lg:top-8">
+          <aside className="rounded-md border border-border bg-sidebar text-sidebar-foreground shadow-soft lg:sticky lg:top-8">
             <div className="border-b border-border px-5 py-4">
               <p className="font-display-label text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
                 recent sessions
