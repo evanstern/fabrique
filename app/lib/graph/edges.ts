@@ -2,27 +2,27 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { getMongoClient } from "@db";
 import { MongoDBSaver } from "@langchain/langgraph-checkpoint-mongodb";
+import { askQuestions } from "./nodes/ask-questions";
 import { applyRevision } from "./nodes/apply-revision";
-import { clarifyOrConfirmBrief } from "./nodes/clarify-or-confirm-brief";
 import { generatePreviews } from "./nodes/generate-previews";
 import { ingestBrief } from "./nodes/ingest-brief";
 import { publishSelectedPreview } from "./nodes/publish-selected-preview";
 import { requestPreviewDecision } from "./nodes/request-preview-decision";
 import { GraphState, type GraphStateValue } from "./state";
 
-/** Route clarification to either another ingest pass or preview generation. */
-function clarifyDestination(
+function questionDestination(
   state: GraphStateValue,
-): "ingest_brief" | "generate_previews" {
+): "apply_revision" | "ingest_brief" | "generate_previews" {
+  if (state.last_review_action === "revise") return "apply_revision";
   return state.ready ? "generate_previews" : "ingest_brief";
 }
 
 /** Route preview review to either revision or publish. */
 function reviewDestination(
   state: GraphStateValue,
-): "apply_revision" | "publish_selected_preview" {
+): "ask_questions" | "publish_selected_preview" {
   return state.last_review_action === "revise"
-    ? "apply_revision"
+    ? "ask_questions"
     : "publish_selected_preview";
 }
 
@@ -30,7 +30,7 @@ function reviewDestination(
 function defineWorkflow() {
   const nodes = new StateGraph(GraphState)
     .addNode("ingest_brief", ingestBrief)
-    .addNode("clarify_or_confirm_brief", clarifyOrConfirmBrief)
+    .addNode("ask_questions", askQuestions)
     .addNode("generate_previews", generatePreviews)
     .addNode("request_preview_decision", requestPreviewDecision)
     .addNode("apply_revision", applyRevision)
@@ -38,8 +38,9 @@ function defineWorkflow() {
 
   const briefingPhase = nodes
     .addEdge(START, "ingest_brief")
-    .addEdge("ingest_brief", "clarify_or_confirm_brief")
-    .addConditionalEdges("clarify_or_confirm_brief", clarifyDestination, [
+    .addEdge("ingest_brief", "ask_questions")
+    .addConditionalEdges("ask_questions", questionDestination, [
+      "apply_revision",
       "ingest_brief",
       "generate_previews",
     ]);
@@ -52,7 +53,7 @@ function defineWorkflow() {
   const reviewPhase = previewPhase.addConditionalEdges(
     "request_preview_decision",
     reviewDestination,
-    ["apply_revision", "publish_selected_preview"],
+    ["ask_questions", "publish_selected_preview"],
   );
 
   const revisionPhase = reviewPhase.addEdge(
