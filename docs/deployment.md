@@ -16,6 +16,7 @@ Fabrique is packaged as a React Router production server with external MongoDB a
 Required compose environment:
 
 - `MONGO_URL`
+- `MONGO_DB`
 - `ANTHROPIC_API_KEY`
 - `FABRIQUE_PASSWORD`
 - `FABRIQUE_AUTH_SECRET`
@@ -87,7 +88,7 @@ The generated service sets:
 
 Branch previews intentionally share the development artifact directory because they also share the development Mongo session records. Keeping artifacts in `dev/artifacts` avoids orphaned preview records when a feature worktree has an empty local `artifacts/` directory.
 
-Secrets such as `MONGO_URL`, `ANTHROPIC_API_KEY`, `FABRIQUE_PASSWORD`, and `FABRIQUE_AUTH_SECRET` are read from the preview worktree's `.env` file when present.
+Secrets such as `MONGO_URL`, `MONGO_DB`, `ANTHROPIC_API_KEY`, `FABRIQUE_PASSWORD`, and `FABRIQUE_AUTH_SECRET` are read from the preview worktree's `.env` file when present.
 
 ## Preview Registry
 

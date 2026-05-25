@@ -63,6 +63,7 @@ Fill in the required values:
 
 - `ANTHROPIC_API_KEY`: Anthropic API key used by LLM workflow nodes.
 - `MONGO_URL`: MongoDB connection string. Atlas is the expected development path.
+- `MONGO_DB`: MongoDB database name, for example `fabrique`.
 - `FABRIQUE_PASSWORD`: shared password for the app gate.
 - `FABRIQUE_AUTH_SECRET`: HMAC secret for signed auth cookies. Generate with `openssl rand -hex 32`.
 
