@@ -7,7 +7,8 @@ import type { ProgressState } from "./session-progress";
 
 type LiveState = {
   name: string;
-  stage: string;
+  stage: Session["stage"];
+  brief: SessionSnapshot["brief"];
   records: SessionSnapshot["records"];
   interrupt: PendingInterrupt | null;
 };
@@ -24,6 +25,7 @@ export function useLiveSession({
   const [live, setLive] = useState<LiveState>({
     name: displaySessionName(session),
     stage: session.stage,
+    brief: session.brief,
     records: session.records,
     interrupt: initialInterrupt,
   });
@@ -37,6 +39,7 @@ export function useLiveSession({
         setLive({
           name: displaySessionName(snap),
           stage: snap.stage,
+          brief: snap.brief,
           records: snap.records,
           interrupt: snap.interrupt,
         });

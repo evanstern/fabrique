@@ -8,6 +8,7 @@ export type SessionSnapshot = {
   session_id: string;
   name?: string;
   stage: Session["stage"];
+  brief: Session["brief"];
   records: Session["records"];
   interrupt: PendingInterrupt | null;
 };
@@ -23,6 +24,7 @@ export async function buildSnapshot(
     session_id: session.session_id,
     name: session.name,
     stage: session.stage,
+    brief: session.brief,
     records: session.records,
     interrupt,
   };
