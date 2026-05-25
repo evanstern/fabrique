@@ -306,6 +306,12 @@ export default function SessionPage({
           session
         </p>
         <div className="flex items-center gap-2">
+          <a
+            href={`/s/${session.session_id}/snapshots`}
+            className="rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition hover:border-ring hover:text-foreground"
+          >
+            State
+          </a>
           <button
             type="button"
             onClick={toggleTheme}
