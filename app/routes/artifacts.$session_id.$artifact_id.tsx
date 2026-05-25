@@ -34,6 +34,17 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
   return new Response(html, {
     status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": [
+        "sandbox",
+        "default-src 'none'",
+        "style-src 'unsafe-inline'",
+        "img-src data: https:",
+        "font-src data: https:",
+        "base-uri 'none'",
+        "form-action 'none'",
+      ].join("; "),
+    },
   });
 }
