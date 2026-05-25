@@ -36,3 +36,17 @@ export async function appendReview(
     },
   );
 }
+
+export async function setReviewNotes(
+  session_id: string,
+  review_id: string,
+  notes: string[],
+): Promise<void> {
+  const db = await getDb();
+  await db.collection<Session>(SESSIONS).updateOne(
+    { session_id, "records.reviews.review_id": review_id },
+    {
+      $set: { "records.reviews.$.notes": notes },
+    },
+  );
+}

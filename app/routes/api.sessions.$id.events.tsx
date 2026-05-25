@@ -125,7 +125,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   if (event.type === "answer_clarification") {
-    if (session.stage !== "briefing") {
+    if (session.stage !== "briefing" && session.stage !== "preview_ready") {
       return Response.json(
         { error: `cannot answer_clarification in stage '${session.stage}'` },
         { status: 409 },
