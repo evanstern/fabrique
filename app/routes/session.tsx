@@ -199,6 +199,17 @@ export default function SessionPage({
   const latestPreview = live.records.previews.at(-1) ?? null;
   const previewArtifactId = latestPreview?.artifact_id ?? null;
   const activePreviewId = previewInterrupt?.target_preview_id ?? latestPreview?.preview_id ?? null;
+  const hasStructuredBrief =
+    session.brief.summary.trim() !== "" ||
+    session.brief.goals.length > 0 ||
+    session.brief.constraints.length > 0 ||
+    session.brief.open_questions.length > 0;
+  const waitingForBriefProcessing =
+    live.stage === "briefing" &&
+    session.brief.raw_input.trim() !== "" &&
+    !hasStructuredBrief &&
+    !live.interrupt &&
+    initialSubmitState.status !== "error";
   const fallbackQuestions =
     live.stage === "briefing" &&
     !live.interrupt &&
@@ -290,7 +301,7 @@ export default function SessionPage({
               <Brief session={session} />
             </ChatMessage>
 
-            {showingInitialProgress ? (
+            {showingInitialProgress || waitingForBriefProcessing ? (
               <ChatMessage eyebrow="Fabrique" tone="warning" square>
                 <ClarificationSkeleton
                   progress={progress}
@@ -372,6 +383,7 @@ export default function SessionPage({
             ) : null}
 
             {!showingInitialProgress &&
+            !waitingForBriefProcessing &&
             !live.interrupt &&
             !fallbackQuestions &&
             live.stage === "briefing" ? (
