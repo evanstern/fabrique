@@ -35,14 +35,18 @@ export function useThemeMode() {
   }, []);
 
   function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
-    try {
-      window.localStorage.setItem("fabrique-theme", nextTheme);
-    } catch {
-      return;
-    }
+    setTheme((currentTheme) => {
+      const nextTheme = currentTheme === "dark" ? "light" : "dark";
+      applyTheme(nextTheme);
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem("fabrique-theme", nextTheme);
+        } catch {
+          return nextTheme;
+        }
+      }
+      return nextTheme;
+    });
   }
 
   return { theme, toggleTheme };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { ProgressState } from "./session-progress";
 
@@ -7,8 +7,6 @@ type InitialSubmitState =
   | { status: "submitting" }
   | { status: "submitted" }
   | { status: "error"; message: string };
-
-const startedInitialSubmissions = new Set<string>();
 
 export function useInitialBriefSubmit({
   initialBrief,
@@ -21,6 +19,7 @@ export function useInitialBriefSubmit({
 }) {
   const [initialSubmitState, setInitialSubmitState] =
     useState<InitialSubmitState>({ status: "idle" });
+  const submittedInitialBriefRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!initialBrief) return;
@@ -29,9 +28,9 @@ export function useInitialBriefSubmit({
     window.history.replaceState(null, "", cleanUrl);
 
     const initialSubmitKey = `${sessionId}:${initialBrief}`;
-    if (startedInitialSubmissions.has(initialSubmitKey)) return;
+    if (submittedInitialBriefRef.current === initialSubmitKey) return;
 
-    startedInitialSubmissions.add(initialSubmitKey);
+    submittedInitialBriefRef.current = initialSubmitKey;
     setInitialSubmitState({ status: "submitting" });
     setProgress({
       node: "ingest_brief",
