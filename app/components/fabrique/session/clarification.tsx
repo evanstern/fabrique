@@ -2,18 +2,23 @@ import { Form } from "react-router";
 
 export function Clarification({
   questions,
+  context,
   submitting,
   error,
 }: {
   questions: string[];
+  context: "brief" | "revision";
   submitting: boolean;
   error: string | null | undefined;
 }) {
+  const intro =
+    context === "revision"
+      ? "A few details would help me apply this revision without guessing."
+      : "A few details would make the page brief stronger before design begins.";
+
   return (
     <section className="space-y-4 text-foreground">
-      <p className="text-sm leading-6 text-muted-foreground">
-        A few details would make the page brief stronger before design begins.
-      </p>
+      <p className="text-sm leading-6 text-muted-foreground">{intro}</p>
       <Form method="post" className="space-y-4">
         {questions.map((q, i) => (
           <div key={i} className="space-y-2">

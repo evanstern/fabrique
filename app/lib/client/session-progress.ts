@@ -11,6 +11,8 @@ export function phaseLabel(phase: string | null): string {
       return "I’m reading your brief and turning it into a clearer page direction.";
     case "checking_readiness":
       return "I’m checking whether there is enough detail to start designing.";
+    case "checking_revision_readiness":
+      return "I’m checking whether the revision request has enough detail to update the preview.";
     case "loading_current_preview":
       return "I’m loading the current preview so I can apply your review notes.";
     case "applying_revision":

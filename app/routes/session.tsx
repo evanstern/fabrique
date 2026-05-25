@@ -274,6 +274,9 @@ export default function SessionPage({
                 ) : (
                   <Clarification
                     questions={live.interrupt.questions}
+                    context={
+                      live.stage === "preview_ready" ? "revision" : "brief"
+                    }
                     submitting={submitting}
                     error={
                       actionData && "error" in actionData ? actionData.error : null
