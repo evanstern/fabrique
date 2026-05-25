@@ -196,7 +196,9 @@ export default function SessionPage({
     live.interrupt.kind === "review_preview"
       ? live.interrupt
       : null;
-  const previewArtifactId = live.records.previews.at(-1)?.artifact_id ?? null;
+  const latestPreview = live.records.previews.at(-1) ?? null;
+  const previewArtifactId = latestPreview?.artifact_id ?? null;
+  const activePreviewId = previewInterrupt?.target_preview_id ?? latestPreview?.preview_id ?? null;
   const fallbackQuestions =
     live.stage === "briefing" &&
     !live.interrupt &&
@@ -376,10 +378,10 @@ export default function SessionPage({
         </section>
 
         <aside className="flex min-h-[32rem] flex-col bg-preview text-preview-foreground">
-          {previewInterrupt ? (
+          {live.stage === "preview_ready" && activePreviewId ? (
             <PreviewPane
               sessionId={session.session_id}
-              targetPreviewId={previewInterrupt.target_preview_id}
+              targetPreviewId={activePreviewId}
               artifactId={previewArtifactId}
             />
           ) : live.stage === "published" && published ? (
