@@ -213,7 +213,7 @@ export default function SessionPage({
             </ChatMessage>
 
             {showingInitialProgress ? (
-              <ChatMessage eyebrow="Fabrique" tone="warning">
+              <ChatMessage eyebrow="Fabrique" tone="warning" square>
                 <ClarificationSkeleton
                   progress={progress}
                   title="Starting your brief"
@@ -228,7 +228,7 @@ export default function SessionPage({
             ) : null}
 
             {live.interrupt && live.interrupt.kind === "answer_clarification" ? (
-              <ChatMessage eyebrow="Clarification" tone="warning">
+              <ChatMessage eyebrow="Clarification" tone="warning" square>
                 {submitting ? (
                   <ClarificationSkeleton progress={progress} />
                 ) : (
