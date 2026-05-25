@@ -12,11 +12,11 @@ type InitialSubmitState =
 type SubmitBriefResponse = { error?: string } | null;
 
 export function useInitialBriefSubmit({
-  initialBrief,
+  shouldStartInitialBrief,
   sessionId,
   setProgress,
 }: {
-  initialBrief: string | null;
+  shouldStartInitialBrief: boolean;
   sessionId: string;
   setProgress: Dispatch<SetStateAction<ProgressState | null>>;
 }) {
@@ -26,12 +26,12 @@ export function useInitialBriefSubmit({
   const submittedInitialBriefRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!initialBrief) return;
+    if (!shouldStartInitialBrief) return;
 
     const cleanUrl = `${location.pathname}${location.hash}`;
     window.history.replaceState(null, "", cleanUrl);
 
-    const initialSubmitKey = `${sessionId}:${initialBrief}`;
+    const initialSubmitKey = sessionId;
     if (submittedInitialBriefRef.current === initialSubmitKey) return;
 
     submittedInitialBriefRef.current = initialSubmitKey;
@@ -43,14 +43,14 @@ export function useInitialBriefSubmit({
     });
 
     fetcher.submit(
-      { type: "submit_brief", raw_input: initialBrief },
+      { type: "submit_brief" },
       {
         action: `/api/sessions/${sessionId}/events`,
         encType: "application/json",
         method: "post",
       },
     );
-  }, [fetcher, initialBrief, sessionId, setProgress]);
+  }, [fetcher, shouldStartInitialBrief, sessionId, setProgress]);
 
   useEffect(() => {
     if (fetcher.state !== "idle") return;

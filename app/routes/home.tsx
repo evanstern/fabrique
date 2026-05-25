@@ -31,7 +31,7 @@ export async function action({ request }: Route.ActionArgs) {
 
   const session = await createSession();
   await setRawInput(session.session_id, raw_input);
-  const params = new URLSearchParams({ initial_brief: raw_input });
+  const params = new URLSearchParams({ initial_brief: "1" });
   return redirect(`/s/${session.session_id}?${params.toString()}`);
 }
 
@@ -83,7 +83,11 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
             </header>
 
             <Form method="post" className="mt-10 max-w-3xl space-y-4">
+              <label htmlFor="raw_input" className="sr-only">
+                What page are we making today?
+              </label>
               <textarea
+                id="raw_input"
                 name="raw_input"
                 rows={7}
                 required

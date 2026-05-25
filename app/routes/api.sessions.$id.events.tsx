@@ -1,6 +1,10 @@
 import { Command } from "@langchain/langgraph";
 import type { Route } from "./+types/api.sessions.$id.events";
-import { appendClarification, getSession, setRawInput } from "@sessions";
+import {
+  appendClarification,
+  getSession,
+  setRawInput,
+} from "@sessions";
 import { getGraph, getPendingInterrupt } from "@graph";
 import { publishSnapshot } from "@stream";
 import { nextSequentialId } from "@records";
@@ -17,7 +21,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 type SubmitBriefEvent = {
   type: "submit_brief";
-  raw_input: string;
 };
 
 type AnswerClarificationEvent = {
@@ -33,7 +36,7 @@ type InputEvent =
 function isSubmitBrief(value: unknown): value is SubmitBriefEvent {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
-  return v.type === "submit_brief" && typeof v.raw_input === "string";
+  return v.type === "submit_brief";
 }
 
 function isAnswerClarification(
@@ -100,24 +103,17 @@ export async function action({ request, params }: Route.ActionArgs) {
         { status: 409 },
       );
     }
-    if (session.brief.raw_input !== "") {
+    const raw_input = session.brief.raw_input.trim();
+    if (raw_input === "") {
       return Response.json(
-        { error: "brief already submitted" },
-        { status: 409 },
-      );
-    }
-    if (event.raw_input.trim() === "") {
-      return Response.json(
-        { error: "raw_input must not be empty" },
+        { error: "raw_input must already be saved before submit_brief" },
         { status: 400 },
       );
     }
 
-    await setRawInput(session.session_id, event.raw_input);
-
     const graph = await getGraph();
     await graph.invoke(
-      { session_id: session.session_id, raw_input: event.raw_input },
+      { session_id: session.session_id, raw_input },
       { configurable: { thread_id: session.session_id } },
     );
 

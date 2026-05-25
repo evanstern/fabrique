@@ -1,8 +1,12 @@
 import { useNavigation } from "react-router";
 import type { Route } from "./+types/session";
 import { Command } from "@langchain/langgraph";
-import { getPublishedPreview, getSession, setRawInput } from "@sessions";
-import { appendClarification } from "@sessions";
+import {
+  appendClarification,
+  getPublishedPreview,
+  getSession,
+  setRawInput,
+} from "@sessions";
 import { getGraph, getPendingInterrupt } from "@graph";
 import { nextSequentialId } from "@records";
 import { publishSnapshot } from "@stream";
@@ -47,7 +51,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     session,
     interrupt,
     published,
-    initialBrief: url.searchParams.get("initial_brief"),
+    shouldStartInitialBrief: url.searchParams.has("initial_brief"),
   };
 }
 
@@ -184,7 +188,7 @@ export default function SessionPage({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const { session, interrupt: initialInterrupt, published, initialBrief } =
+  const { session, interrupt: initialInterrupt, published, shouldStartInitialBrief } =
     loaderData;
   const navigation = useNavigation();
   const submitting = navigation.state === "submitting";
@@ -196,7 +200,7 @@ export default function SessionPage({
     submitting,
   });
   const initialSubmitState = useInitialBriefSubmit({
-    initialBrief,
+    shouldStartInitialBrief,
     sessionId: session.session_id,
     setProgress,
   });
@@ -216,14 +220,21 @@ export default function SessionPage({
   const latestPreview = live.records.previews.at(-1) ?? null;
   const previewArtifactId = latestPreview?.artifact_id ?? null;
   const activePreviewId = previewInterrupt?.target_preview_id ?? latestPreview?.preview_id ?? null;
+  const liveSession = {
+    ...session,
+    name: live.name,
+    stage: live.stage,
+    brief: live.brief,
+    records: live.records,
+  };
   const hasStructuredBrief =
-    session.brief.summary.trim() !== "" ||
-    session.brief.goals.length > 0 ||
-    session.brief.constraints.length > 0 ||
-    session.brief.open_questions.length > 0;
+    live.brief.summary.trim() !== "" ||
+    live.brief.goals.length > 0 ||
+    live.brief.constraints.length > 0 ||
+    live.brief.open_questions.length > 0;
   const waitingForBriefProcessing =
     live.stage === "briefing" &&
-    session.brief.raw_input.trim() !== "" &&
+    live.brief.raw_input.trim() !== "" &&
     !hasStructuredBrief &&
     !live.interrupt &&
     initialSubmitState.status !== "error";
@@ -232,8 +243,8 @@ export default function SessionPage({
   const fallbackQuestions =
     live.stage === "briefing" &&
     !live.interrupt &&
-    session.brief.open_questions.length > 0
-      ? session.brief.open_questions
+    live.brief.open_questions.length > 0
+      ? live.brief.open_questions
       : null;
   const submittingRevision =
     submitting && previewInterrupt !== null && reviewAction === "revise";
@@ -317,7 +328,7 @@ export default function SessionPage({
 
           <div className="flex flex-1 flex-col overflow-y-auto">
             <ChatMessage eyebrow="Brief" tone="neutral" square transparent>
-              <Brief session={session} />
+              <Brief session={liveSession} />
             </ChatMessage>
 
             {showingInitialProgress ? (
