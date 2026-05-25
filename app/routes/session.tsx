@@ -293,6 +293,7 @@ export default function SessionPage({
                 ) : (
                   <Clarification
                     questions={fallbackQuestions}
+                    context="brief"
                     submitting={submitting}
                     error={
                       actionData && "error" in actionData ? actionData.error : null
