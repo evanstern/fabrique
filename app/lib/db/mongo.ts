@@ -16,6 +16,14 @@ function getClient(): Promise<MongoClient> {
   return clientPromise;
 }
 
+function getDbName(): string {
+  const dbName = process.env.MONGO_DB?.trim();
+  if (!dbName) {
+    throw new Error("MONGO_DB is not set");
+  }
+  return dbName;
+}
+
 export async function getMongoClient(): Promise<MongoClient> {
   return getClient();
 }
@@ -23,5 +31,5 @@ export async function getMongoClient(): Promise<MongoClient> {
 /** Return the default database handle used by session and workflow code. */
 export async function getDb(): Promise<Db> {
   const client = await getClient();
-  return client.db();
+  return client.db(getDbName());
 }

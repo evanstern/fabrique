@@ -1,9 +1,11 @@
 // Session read helper that hides Mongo's internal _id field.
 import { getDb } from "@db";
+import { ensureSessionIndexes } from "./indexes";
 import { SESSIONS, type Session, type SessionNavigationSummary } from "./types";
 
 /** Load one session document by id without exposing Mongo's internal _id. */
 export async function getSession(id: string): Promise<Session | null> {
+  await ensureSessionIndexes();
   const db = await getDb();
   const sessions = db.collection<Session>(SESSIONS);
   return await sessions.findOne(
@@ -15,6 +17,7 @@ export async function getSession(id: string): Promise<Session | null> {
 export async function listSessionNavigationSummaries(): Promise<
   SessionNavigationSummary[]
 > {
+  await ensureSessionIndexes();
   const db = await getDb();
   const sessions = db.collection<Session>(SESSIONS);
   const recent = await sessions
