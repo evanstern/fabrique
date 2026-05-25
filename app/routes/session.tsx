@@ -92,6 +92,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 type LiveState = {
   stage: string;
+  records: SessionSnapshot["records"];
   interrupt: PendingInterrupt | null;
 };
 
@@ -128,6 +129,7 @@ export default function SessionPage({
 
   const [live, setLive] = useState<LiveState>({
     stage: session.stage,
+    records: session.records,
     interrupt: initialInterrupt,
   });
   const [progress, setProgress] = useState<ProgressState | null>(null);
@@ -139,7 +141,11 @@ export default function SessionPage({
     es.onmessage = (ev) => {
       try {
         const snap = JSON.parse(ev.data) as SessionSnapshot;
-        setLive({ stage: snap.stage, interrupt: snap.interrupt });
+        setLive({
+          stage: snap.stage,
+          records: snap.records,
+          interrupt: snap.interrupt,
+        });
         setProgress(null);
       } catch {
         // Bad payload from server is not actionable here; ignore.
@@ -210,13 +216,12 @@ export default function SessionPage({
   const showingInitialProgress =
     initialSubmitState.status === "submitting" && !live.interrupt;
   const previewInterrupt =
-    live.stage !== "published" &&
     live.stage === "preview_ready" &&
     live.interrupt &&
     live.interrupt.kind === "review_preview"
       ? live.interrupt
       : null;
-  const previewArtifactId = session.records.previews.at(-1)?.artifact_id ?? null;
+  const previewArtifactId = live.records.previews.at(-1)?.artifact_id ?? null;
 
   return (
     <main className="min-h-screen px-4 py-4 text-foreground sm:px-6 lg:px-8">
@@ -490,8 +495,8 @@ function PreviewDecision({
   return (
     <section className="space-y-4 text-foreground">
       <p className="text-sm leading-6 text-muted-foreground">
-        Preview {targetPreviewId} is ready on the right. Approve it or leave one
-        revision note per line.
+        Preview {targetPreviewId} is ready in the preview pane. Approve it or
+        leave one revision note per line.
       </p>
       <Form method="post" className="space-y-3">
         <div className="space-y-2">
