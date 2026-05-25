@@ -12,6 +12,7 @@ import { PreviewSchema, type Preview } from "@schemas/llm";
 import { appendPreviewArtifact, getSession } from "@sessions";
 import { APPLY_REVISION_SYSTEM } from "../prompts";
 import { artifactsDir } from "../runtime/artifacts-dir";
+import { withProgress } from "../runtime/progress";
 import type { GraphNode } from "../state";
 
 /** Rewrite the latest preview HTML in response to the stored review notes. */
@@ -47,7 +48,12 @@ export const applyRevision: GraphNode = async (state) => {
     state.session_id,
     `${priorArtifact.artifact_id}.html`,
   );
-  const priorHtml = await readFile(priorHtmlPath, "utf8");
+  const priorHtml = await withProgress(
+    state.session_id,
+    "apply_revision",
+    "reading_review_notes",
+    () => readFile(priorHtmlPath, "utf8"),
+  );
 
   const llm = new ChatAnthropic({
     model: "claude-sonnet-4-5-20250929",
@@ -55,25 +61,31 @@ export const applyRevision: GraphNode = async (state) => {
     maxTokens: 16000,
   }).withStructuredOutput(PreviewSchema);
 
-  const preview = (await llm.invoke([
-    { role: "system", content: APPLY_REVISION_SYSTEM },
-    {
-      role: "user",
-      content: [
-        `Brief:`,
-        ``,
-        `summary: ${state.summary}`,
-        `goals: ${JSON.stringify(state.goals)}`,
-        `constraints: ${JSON.stringify(state.constraints)}`,
-        ``,
-        `Review notes from the user on the previous preview:`,
-        JSON.stringify(latestReview.notes),
-        ``,
-        `Previous preview HTML (the one the user just reviewed):`,
-        priorHtml,
-      ].join("\n"),
-    },
-  ])) as Preview;
+  const preview = (await withProgress(
+    state.session_id,
+    "apply_revision",
+    "applying_revision",
+    () =>
+      llm.invoke([
+        { role: "system", content: APPLY_REVISION_SYSTEM },
+        {
+          role: "user",
+          content: [
+            `Brief:`,
+            ``,
+            `summary: ${state.summary}`,
+            `goals: ${JSON.stringify(state.goals)}`,
+            `constraints: ${JSON.stringify(state.constraints)}`,
+            ``,
+            `Review notes from the user on the previous preview:`,
+            JSON.stringify(latestReview.notes),
+            ``,
+            `Previous preview HTML (the one the user just reviewed):`,
+            priorHtml,
+          ].join("\n"),
+        },
+      ]),
+  )) as Preview;
 
   const artifact_id = nextSequentialId(
     "artifact",
@@ -83,10 +95,6 @@ export const applyRevision: GraphNode = async (state) => {
     "preview",
     session.records.previews.length,
   );
-
-  const dir = join(artifactsDir(), state.session_id);
-  await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, `${artifact_id}.html`), preview.html, "utf8");
 
   const artifactRecord: ArtifactRecord = {
     artifact_id,
@@ -98,11 +106,22 @@ export const applyRevision: GraphNode = async (state) => {
     artifact_id,
   };
 
-  await appendPreviewArtifact(
+  await withProgress(
     state.session_id,
-    artifactRecord,
-    previewRecord,
-    "preview_ready",
+    "apply_revision",
+    "preparing_updated_preview",
+    async () => {
+      const dir = join(artifactsDir(), state.session_id);
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, `${artifact_id}.html`), preview.html, "utf8");
+
+      await appendPreviewArtifact(
+        state.session_id,
+        artifactRecord,
+        previewRecord,
+        "preview_ready",
+      );
+    },
   );
 
   return {};
