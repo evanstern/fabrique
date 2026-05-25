@@ -47,7 +47,46 @@ crafted than a default SaaS dashboard.
   comes through in restraint rather than in a display face.
 - **Fit:** best balance for the current product direction.
 
-## Recommendation
+## Specimen review feedback
+
+Evan reviewed the live specimen page and preferred a blended direction rather
+than one single stack everywhere:
+
+- **Fabrique wordmark / brand:** keep Plex for the `fabrique` text itself. The
+  current boldness, size, and serif character still feel right for the product
+  name.
+- **Small muted labels and light-gray UI metadata:** use Geist where practical.
+  It gives the interface labels a cleaner AI-workspace feel without taking over
+  the brand voice.
+- **General prose and explanatory text:** keep the editorial/source-style body
+  direction. Source Sans 3 carries prompts, notes, and review copy warmly while
+  staying legible in product UI.
+- **High-level uppercase labels:** use Space Grotesk for items like `PASSWORD`,
+  `BRIEF PROMPT`, `REVIEW`, and `PUBLISHED`. It has the distinctive technical
+  flavor Evan liked, but it should not replace true monospace usage.
+- **True mono strings:** keep a real mono stack for session IDs, URLs, artifact
+  paths, and code-ish values. Space Grotesk is not a monospace font.
+
+## Final blended direction
+
+The live app uses the **blended** direction:
+
+- **Brand:** IBM Plex Serif via the `--font-brand` role.
+- **Body / prose:** Source Sans 3 via the `--font-body` role.
+- **Muted metadata:** Geist via the `--font-label` role.
+- **Display labels:** Space Grotesk via the `--font-display-label` role.
+- **Mono:** IBM Plex Mono via the `--font-mono` role.
+
+This keeps the parts Evan liked from each specimen without making the whole app
+feel like a patchwork. The wordmark remains grounded in Plex, the working copy
+stays readable and warm, metadata recedes cleanly, uppercase labels get a more
+intentional technical voice, and IDs/URLs remain properly monospaced.
+
+Temporary review controls — the font selectors and `/font-specimens` specimen
+route — were removed before merge. The branch keeps the selected blended system
+as the normal app typography rather than as a switchable exploration mode.
+
+## Prior recommendation
 
 Land the **technical/calm** system:
 
