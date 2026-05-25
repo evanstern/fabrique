@@ -109,6 +109,7 @@ export default function SessionPage({
     loaderData;
   const navigation = useNavigation();
   const submitting = navigation.state === "submitting";
+  const reviewAction = navigation.formData?.get("action");
 
   const { live, progress, setProgress } = useLiveSession({
     session,
@@ -134,6 +135,8 @@ export default function SessionPage({
       ? live.interrupt
       : null;
   const previewArtifactId = live.records.previews.at(-1)?.artifact_id ?? null;
+  const submittingRevision =
+    submitting && previewInterrupt !== null && reviewAction === "revise";
 
   function copyCurrentUrl() {
     if (typeof window === "undefined") return;
@@ -245,13 +248,20 @@ export default function SessionPage({
 
             {previewInterrupt ? (
               <ChatMessage eyebrow="Review" tone="info" square fill>
-                <PreviewDecision
-                  targetPreviewId={previewInterrupt.target_preview_id}
-                  submitting={submitting}
-                  error={
-                    actionData && "error" in actionData ? actionData.error : null
-                  }
-                />
+                {submittingRevision ? (
+                  <ClarificationSkeleton
+                    progress={progress}
+                    title="Revising your preview"
+                  />
+                ) : (
+                  <PreviewDecision
+                    targetPreviewId={previewInterrupt.target_preview_id}
+                    submitting={submitting}
+                    error={
+                      actionData && "error" in actionData ? actionData.error : null
+                    }
+                  />
+                )}
               </ChatMessage>
             ) : null}
 
