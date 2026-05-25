@@ -20,18 +20,24 @@ export function Clarification({
     <section className="space-y-4 text-foreground">
       <p className="text-sm leading-6 text-muted-foreground">{intro}</p>
       <Form method="post" className="space-y-4">
-        {questions.map((q, i) => (
-          <div key={i} className="space-y-2">
-            <label className="block text-sm font-medium">{q}</label>
-            <input
-              name={q}
-              type="text"
-              disabled={submitting}
-              placeholder="Type your answer here"
-              className="w-full rounded-[6px] border border-input bg-input-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/35"
-            />
-          </div>
-        ))}
+        {questions.map((q, i) => {
+          const inputId = `clarification-${context}-${i}`;
+          return (
+            <div key={inputId} className="space-y-2">
+              <label htmlFor={inputId} className="block text-sm font-medium">
+                {q}
+              </label>
+              <input
+                id={inputId}
+                name={q}
+                type="text"
+                disabled={submitting}
+                placeholder="Type your answer here"
+                className="w-full rounded-[6px] border border-input bg-input-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/35"
+              />
+            </div>
+          );
+        })}
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <button
           type="submit"
