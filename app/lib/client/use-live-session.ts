@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import type { PendingInterrupt } from "@graph";
 import type { SessionSnapshot } from "@stream";
 import type { Session } from "@sessions";
+import { displaySessionName } from "~/lib/session-names";
 import type { ProgressState } from "./session-progress";
 
 type LiveState = {
+  name: string;
   stage: string;
   records: SessionSnapshot["records"];
   interrupt: PendingInterrupt | null;
@@ -20,6 +22,7 @@ export function useLiveSession({
   submitting: boolean;
 }) {
   const [live, setLive] = useState<LiveState>({
+    name: displaySessionName(session),
     stage: session.stage,
     records: session.records,
     interrupt: initialInterrupt,
@@ -32,6 +35,7 @@ export function useLiveSession({
       try {
         const snap = JSON.parse(ev.data) as SessionSnapshot;
         setLive({
+          name: displaySessionName(snap),
           stage: snap.stage,
           records: snap.records,
           interrupt: snap.interrupt,

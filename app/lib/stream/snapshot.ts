@@ -6,6 +6,7 @@ import { publishBuiltSnapshot } from "./hub";
 /** Snapshot payload sent to the live client for one session. */
 export type SessionSnapshot = {
   session_id: string;
+  name?: string;
   stage: Session["stage"];
   records: Session["records"];
   interrupt: PendingInterrupt | null;
@@ -20,6 +21,7 @@ export async function buildSnapshot(
   const interrupt = await getPendingInterrupt(session_id);
   return {
     session_id: session.session_id,
+    name: session.name,
     stage: session.stage,
     records: session.records,
     interrupt,

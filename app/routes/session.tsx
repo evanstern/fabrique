@@ -61,6 +61,23 @@ export async function action({ request, params }: Route.ActionArgs) {
   const form = await request.formData();
   const graph = await getGraph();
 
+  const action = String(form.get("action") ?? "");
+  if (action === "retry_brief") {
+    const raw_input = session.brief.raw_input.trim();
+    if (session.stage !== "briefing") {
+      return { error: `cannot retry brief in stage '${session.stage}'` };
+    }
+    if (raw_input === "") {
+      return { error: "There is no brief to retry." };
+    }
+    await graph.invoke(
+      { session_id: session.session_id, raw_input },
+      { configurable: { thread_id: session.session_id } },
+    );
+    await publishSnapshot(params.id);
+    return { ok: true };
+  }
+
   if (
     session.stage === "briefing" &&
     session.brief.open_questions.length > 0 &&
@@ -199,6 +216,19 @@ export default function SessionPage({
   const latestPreview = live.records.previews.at(-1) ?? null;
   const previewArtifactId = latestPreview?.artifact_id ?? null;
   const activePreviewId = previewInterrupt?.target_preview_id ?? latestPreview?.preview_id ?? null;
+  const hasStructuredBrief =
+    session.brief.summary.trim() !== "" ||
+    session.brief.goals.length > 0 ||
+    session.brief.constraints.length > 0 ||
+    session.brief.open_questions.length > 0;
+  const waitingForBriefProcessing =
+    live.stage === "briefing" &&
+    session.brief.raw_input.trim() !== "" &&
+    !hasStructuredBrief &&
+    !live.interrupt &&
+    initialSubmitState.status !== "error";
+  const showBriefStartRecovery =
+    waitingForBriefProcessing && initialSubmitState.status !== "submitting";
   const fallbackQuestions =
     live.stage === "briefing" &&
     !live.interrupt &&
@@ -259,8 +289,13 @@ export default function SessionPage({
             <div className="w-full space-y-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
                 <h1 className="max-w-sm truncate font-mono text-sm font-medium tracking-tight sm:text-base">
-                  {session.session_id}
+                  {live.name}
                 </h1>
+                {live.name !== session.session_id ? (
+                  <p className="max-w-sm truncate font-mono text-xs text-muted-foreground">
+                    {session.session_id}
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   onClick={copyCurrentUrl}
@@ -291,6 +326,31 @@ export default function SessionPage({
                   progress={progress}
                   title="Starting your brief"
                 />
+              </ChatMessage>
+            ) : null}
+
+            {showBriefStartRecovery ? (
+              <ChatMessage eyebrow="Needs attention" tone="danger">
+                <section className="space-y-3">
+                  <h2 className="text-sm font-medium text-destructive">
+                    Brief did not finish starting
+                  </h2>
+                  <p className="text-sm leading-6 text-foreground">
+                    The brief text was saved, but no workflow checkpoint was
+                    created. The model call may have failed or the server may
+                    have reloaded while it was starting.
+                  </p>
+                  <form method="post">
+                    <button
+                      type="submit"
+                      name="action"
+                      value="retry_brief"
+                      className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:bg-accent/90"
+                    >
+                      Retry brief processing
+                    </button>
+                  </form>
+                </section>
               </ChatMessage>
             ) : null}
 
@@ -367,6 +427,7 @@ export default function SessionPage({
             ) : null}
 
             {!showingInitialProgress &&
+            !waitingForBriefProcessing &&
             !live.interrupt &&
             !fallbackQuestions &&
             live.stage === "briefing" ? (

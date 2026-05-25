@@ -24,6 +24,7 @@ export async function listSessionNavigationSummaries(): Promise<
         projection: {
           _id: 0,
           session_id: 1,
+          name: 1,
           stage: 1,
           "brief.raw_input": 1,
           "brief.summary": 1,
@@ -36,6 +37,7 @@ export async function listSessionNavigationSummaries(): Promise<
 
   return recent.map((session: SessionNavigationSummary) => ({
     session_id: session.session_id,
+    name: session.name,
     stage: session.stage,
     brief: {
       raw_input: session.brief.raw_input,

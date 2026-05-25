@@ -18,6 +18,7 @@ export type SessionStage =
 /** Canonical Mongo session document shape used across the workflow. */
 export type Session = {
   session_id: string;
+  name?: string;
   stage: SessionStage;
   brief: {
     raw_input: string;
@@ -36,6 +37,7 @@ export type Session = {
 
 export type SessionNavigationSummary = {
   session_id: string;
+  name?: string;
   stage: SessionStage;
   brief: {
     raw_input: string;

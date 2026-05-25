@@ -13,6 +13,16 @@ export async function setRawInput(
     .updateOne({ session_id }, { $set: { "brief.raw_input": raw_input } });
 }
 
+export async function setSessionName(
+  session_id: string,
+  name: string,
+): Promise<void> {
+  const db = await getDb();
+  await db
+    .collection<Session>(SESSIONS)
+    .updateOne({ session_id }, { $set: { name } });
+}
+
 /** Replace the structured brief fields after ingest has parsed them. */
 export async function patchBrief(
   session_id: string,

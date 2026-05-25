@@ -27,3 +27,16 @@ export const BriefFieldsSchema = z.object({
 
 /** Inferred TypeScript shape for the structured brief output. */
 export type BriefFields = z.infer<typeof BriefFieldsSchema>;
+
+export const SessionNameSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .describe(
+      "A concise, human-readable title for this page-making session. Use title case or natural casing, no trailing punctuation.",
+    ),
+});
+
+export type SessionName = z.infer<typeof SessionNameSchema>;

@@ -9,6 +9,8 @@ export function phaseLabel(phase: string | null): string {
   switch (phase) {
     case "refining_brief":
       return "I’m reading your brief and turning it into a clearer page direction.";
+    case "naming_session":
+      return "I’m naming this session so it is easier to recognize later.";
     case "checking_readiness":
       return "I’m checking whether there is enough detail to start designing.";
     case "checking_revision_readiness":

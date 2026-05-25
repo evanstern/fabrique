@@ -6,6 +6,10 @@ The user is describing a single web page they want to make. Keep the summary pla
 
 The raw brief may contain follow-up clarifications appended as "Q: ...\nA: ..." pairs. Treat those answers as authoritative input from the user and incorporate them into summary, goals, and constraints as appropriate.`;
 
+export const NAME_SESSION_SYSTEM = `You name a page-making session from the user's brief.
+
+Return a short, human-readable title for the session, not marketing copy. The name should be specific enough to recognize later in navigation, concise enough for a header, and stable across reloads. Do not include quotation marks, trailing punctuation, or generic words like "Session" unless they are part of the user's topic.`;
+
 export const BRIEF_CLARIFICATION_SYSTEM = `You are a readiness gate for a page-making workflow.
 
 Given a structured brief (summary, goals, constraints, open_questions), decide whether the brief is good enough to generate a meaningful first preview of the page.

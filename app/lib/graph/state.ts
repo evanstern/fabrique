@@ -9,6 +9,7 @@ import { Annotation } from "@langchain/langgraph";
  */
 export const GraphState = Annotation.Root({
   session_id: Annotation<string>(),
+  name: Annotation<string>({ default: () => "", reducer: (_, n) => n }),
   raw_input: Annotation<string>({ reducer: (_, n) => n }),
   summary: Annotation<string>({ default: () => "", reducer: (_, n) => n }),
   goals: Annotation<string[]>({ default: () => [], reducer: (_, n) => n }),
