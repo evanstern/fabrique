@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { PendingInterrupt } from "@graph";
 import type { SessionSnapshot } from "@stream";
 import type { Session } from "@sessions";
+import { displaySessionName } from "~/lib/session-names";
 import type { ProgressState } from "./session-progress";
 
 type LiveState = {

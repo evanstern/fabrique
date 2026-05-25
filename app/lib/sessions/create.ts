@@ -13,6 +13,7 @@ function newSessionId(): string {
 function emptySession(session_id: string): Session {
   return {
     session_id,
+    name: "",
     stage: "briefing",
     brief: {
       raw_input: "",

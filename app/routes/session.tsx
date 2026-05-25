@@ -259,8 +259,13 @@ export default function SessionPage({
             <div className="w-full space-y-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
                 <h1 className="max-w-sm truncate font-mono text-sm font-medium tracking-tight sm:text-base">
-                  {session.session_id}
+                  {live.name}
                 </h1>
+                {live.name !== session.session_id ? (
+                  <p className="max-w-sm truncate font-mono text-xs text-muted-foreground">
+                    {session.session_id}
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   onClick={copyCurrentUrl}
