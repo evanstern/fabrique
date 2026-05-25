@@ -1,22 +1,19 @@
 import { Command } from "@langchain/langgraph";
 import type { Route } from "./+types/api.sessions.$id.events";
-import { getSession, setRawInput } from "../lib/sessions.server";
-import { getGraph, getPendingInterrupt } from "../lib/graph.server";
-import { publishSnapshot } from "../lib/sse-hub.server";
 import {
   ReviewPreviewEventSchema,
   type ReviewPreviewEvent,
-} from "../lib/preview.server";
-import { requireAuth } from "../lib/auth.server";
+} from "@schemas/input";
 
 export async function loader({ request }: Route.LoaderArgs) {
+  const { requireAuth } = await import("@auth");
   requireAuth(request, { api: true });
   return Response.json({ error: "method not allowed" }, { status: 405 });
 }
 
 type SubmitBriefEvent = {
   type: "submit_brief";
-  raw_input: string;
+  raw_input?: string;
 };
 
 type AnswerClarificationEvent = {
@@ -32,7 +29,8 @@ type InputEvent =
 function isSubmitBrief(value: unknown): value is SubmitBriefEvent {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
-  return v.type === "submit_brief" && typeof v.raw_input === "string";
+  if (v.type !== "submit_brief") return false;
+  return v.raw_input === undefined || typeof v.raw_input === "string";
 }
 
 function isAnswerClarification(
@@ -63,6 +61,20 @@ function parseEvent(value: unknown): InputEvent | null {
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
+  const [sessions, graphModule, streamModule, recordsModule, authModule] =
+    await Promise.all([
+      import("@sessions"),
+      import("@graph"),
+      import("@stream"),
+      import("@records"),
+      import("@auth"),
+    ]);
+  const { appendClarification, getSession, setRawInput } = sessions;
+  const { getGraph, getPendingInterrupt } = graphModule;
+  const { publishSnapshot } = streamModule;
+  const { nextSequentialId } = recordsModule;
+  const { requireAuth } = authModule;
+
   requireAuth(request, { api: true });
   if (request.method !== "POST") {
     return Response.json({ error: "method not allowed" }, { status: 405 });
@@ -99,24 +111,22 @@ export async function action({ request, params }: Route.ActionArgs) {
         { status: 409 },
       );
     }
-    if (session.brief.raw_input !== "") {
+    const submittedRawInput = event.raw_input?.trim();
+    const raw_input = submittedRawInput || session.brief.raw_input.trim();
+    if (raw_input === "") {
       return Response.json(
-        { error: "brief already submitted" },
-        { status: 409 },
-      );
-    }
-    if (event.raw_input.trim() === "") {
-      return Response.json(
-        { error: "raw_input must not be empty" },
+        { error: "raw_input is required for submit_brief" },
         { status: 400 },
       );
     }
 
-    await setRawInput(session.session_id, event.raw_input);
+    if (submittedRawInput !== undefined) {
+      await setRawInput(session.session_id, raw_input);
+    }
 
     const graph = await getGraph();
     await graph.invoke(
-      { session_id: session.session_id, raw_input: event.raw_input },
+      { session_id: session.session_id, raw_input },
       { configurable: { thread_id: session.session_id } },
     );
 
@@ -125,7 +135,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   if (event.type === "answer_clarification") {
-    if (session.stage !== "briefing") {
+    if (session.stage !== "briefing" && session.stage !== "preview_ready") {
       return Response.json(
         { error: `cannot answer_clarification in stage '${session.stage}'` },
         { status: 409 },
@@ -141,6 +151,16 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
 
     const graph = await getGraph();
+    await appendClarification(session.session_id, {
+      clarification_id: nextSequentialId(
+        "clarification",
+        session.records.clarifications?.length ?? 0,
+      ),
+      context: session.stage === "preview_ready" ? "revision" : "brief",
+      questions: pending.questions,
+      answers: event.answers,
+      created_at: new Date(),
+    });
     await graph.invoke(new Command({ resume: event.answers }), {
       configurable: { thread_id: session.session_id },
     });

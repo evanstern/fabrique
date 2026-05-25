@@ -1,9 +1,8 @@
 import type { Route } from "./+types/api.sessions.$id";
-import { getSession } from "../lib/sessions.server";
-import { getPendingInterrupt } from "../lib/graph.server";
-import { requireAuth } from "../lib/auth.server";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
+  const [{ getSession }, { getPendingInterrupt }, { requireAuth }] =
+    await Promise.all([import("@sessions"), import("@graph"), import("@auth")]);
   requireAuth(request, { api: true });
   const session = await getSession(params.id);
   if (!session) {

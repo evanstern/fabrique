@@ -1,6 +1,6 @@
 import { redirect } from "react-router";
 import type { Route } from "./+types/logout";
-import { buildClearAuthCookieHeader } from "../lib/auth.server";
+import { buildClearAuthCookieHeader } from "@auth";
 
 export async function loader() {
   return new Response("method not allowed", { status: 405 });

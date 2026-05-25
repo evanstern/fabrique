@@ -1,14 +1,34 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Route } from "./+types/artifacts.$session_id.$artifact_id";
-import { getSession } from "../lib/sessions.server";
-import { requireAuth } from "../lib/auth.server";
 
 function artifactsDir(): string {
   return process.env.ARTIFACTS_DIR ?? "./artifacts";
 }
 
+const artifactCsp = [
+  // V1 generated pages are self-contained HTML and may include inline scripts.
+  // Keep them in a sandboxed opaque origin so script can run without inheriting
+  // Fabrique's origin, cookies, storage, or authenticated API access.
+  "sandbox allow-scripts",
+  "default-src 'none'",
+  "script-src 'unsafe-inline'",
+  "style-src 'unsafe-inline'",
+  "img-src data:",
+  "font-src data:",
+  "connect-src 'none'",
+  "media-src data:",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
+
 export async function loader({ request, params }: Route.LoaderArgs) {
+  const [{ getSession }, { requireAuth }] = await Promise.all([
+    import("@sessions"),
+    import("@auth"),
+  ]);
   requireAuth(request, { api: true });
   const { session_id, artifact_id } = params;
 
@@ -34,6 +54,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
   return new Response(html, {
     status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": artifactCsp,
+    },
   });
 }
