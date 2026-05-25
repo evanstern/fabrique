@@ -1,26 +1,19 @@
 import { Command } from "@langchain/langgraph";
 import type { Route } from "./+types/api.sessions.$id.events";
 import {
-  appendClarification,
-  getSession,
-  setRawInput,
-} from "@sessions";
-import { getGraph, getPendingInterrupt } from "@graph";
-import { publishSnapshot } from "@stream";
-import { nextSequentialId } from "@records";
-import {
   ReviewPreviewEventSchema,
   type ReviewPreviewEvent,
 } from "@schemas/input";
-import { requireAuth } from "@auth";
 
 export async function loader({ request }: Route.LoaderArgs) {
+  const { requireAuth } = await import("@auth");
   requireAuth(request, { api: true });
   return Response.json({ error: "method not allowed" }, { status: 405 });
 }
 
 type SubmitBriefEvent = {
   type: "submit_brief";
+  raw_input?: string;
 };
 
 type AnswerClarificationEvent = {
@@ -36,7 +29,8 @@ type InputEvent =
 function isSubmitBrief(value: unknown): value is SubmitBriefEvent {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
-  return v.type === "submit_brief";
+  if (v.type !== "submit_brief") return false;
+  return v.raw_input === undefined || typeof v.raw_input === "string";
 }
 
 function isAnswerClarification(
@@ -67,6 +61,20 @@ function parseEvent(value: unknown): InputEvent | null {
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
+  const [sessions, graphModule, streamModule, recordsModule, authModule] =
+    await Promise.all([
+      import("@sessions"),
+      import("@graph"),
+      import("@stream"),
+      import("@records"),
+      import("@auth"),
+    ]);
+  const { appendClarification, getSession, setRawInput } = sessions;
+  const { getGraph, getPendingInterrupt } = graphModule;
+  const { publishSnapshot } = streamModule;
+  const { nextSequentialId } = recordsModule;
+  const { requireAuth } = authModule;
+
   requireAuth(request, { api: true });
   if (request.method !== "POST") {
     return Response.json({ error: "method not allowed" }, { status: 405 });
@@ -103,12 +111,17 @@ export async function action({ request, params }: Route.ActionArgs) {
         { status: 409 },
       );
     }
-    const raw_input = session.brief.raw_input.trim();
+    const submittedRawInput = event.raw_input?.trim();
+    const raw_input = submittedRawInput || session.brief.raw_input.trim();
     if (raw_input === "") {
       return Response.json(
-        { error: "raw_input must already be saved before submit_brief" },
+        { error: "raw_input is required for submit_brief" },
         { status: 400 },
       );
+    }
+
+    if (submittedRawInput !== undefined) {
+      await setRawInput(session.session_id, raw_input);
     }
 
     const graph = await getGraph();

@@ -1,11 +1,5 @@
 import type { Route } from "./+types/api.sessions.$id.stream";
-import { buildSnapshot, type SessionSnapshot } from "@stream";
-import {
-  subscribe,
-  subscribeProgress,
-  type ProgressEvent,
-} from "@stream";
-import { requireAuth } from "@auth";
+import type { ProgressEvent, SessionSnapshot } from "@stream";
 
 const HEARTBEAT_MS = 20_000;
 const PROGRESS_THROTTLE_MS = 150;
@@ -19,6 +13,8 @@ function encodeProgress(event: ProgressEvent): string {
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {
+  const [{ buildSnapshot, subscribe, subscribeProgress }, { requireAuth }] =
+    await Promise.all([import("@stream"), import("@auth")]);
   requireAuth(request, { api: true });
   const initial = await buildSnapshot(params.id);
   if (!initial) {
