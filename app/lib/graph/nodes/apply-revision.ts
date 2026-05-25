@@ -9,7 +9,7 @@ import {
   type PreviewRecord,
 } from "@records";
 import { PreviewSchema, type Preview } from "@schemas/llm";
-import { appendPreviewArtifact, getSession } from "@sessions";
+import { appendPreviewArtifact, getSession, transitionStage } from "@sessions";
 import { APPLY_REVISION_SYSTEM } from "../prompts";
 import { artifactsDir } from "../runtime/artifacts-dir";
 import { withProgress } from "../runtime/progress";
@@ -20,6 +20,16 @@ export const applyRevision: GraphNode = async (state) => {
   const session = await getSession(state.session_id);
   if (!session) {
     throw new Error(`apply_revision: session ${state.session_id} not found`);
+  }
+  const started = await transitionStage(
+    state.session_id,
+    "preview_ready",
+    "revising",
+  );
+  if (!started && session.stage !== "revising") {
+    throw new Error(
+      `apply_revision: session ${state.session_id} is not ready to start revising`,
+    );
   }
 
   const latestPreview = session.records.previews.at(-1);

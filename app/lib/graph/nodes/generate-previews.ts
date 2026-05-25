@@ -9,13 +9,23 @@ import {
   type PreviewRecord,
 } from "@records";
 import { PreviewSchema, type Preview } from "@schemas/llm";
-import { appendPreviewArtifact, getSession } from "@sessions";
+import { appendPreviewArtifact, getSession, transitionStage } from "@sessions";
 import { GENERATE_PREVIEWS_SYSTEM } from "../prompts";
 import { artifactsDir } from "../runtime/artifacts-dir";
 import type { GraphNode } from "../state";
 
 /** Generate and persist the first preview HTML artifact for a session. */
 export const generatePreviews: GraphNode = async (state) => {
+  const started = await transitionStage(state.session_id, "briefing", "designing");
+  if (!started) {
+    const current = await getSession(state.session_id);
+    if (current?.stage !== "designing") {
+      throw new Error(
+        `generate_previews: session ${state.session_id} is not ready to start designing`,
+      );
+    }
+  }
+
   const llm = new ChatAnthropic({
     model: "claude-sonnet-4-5-20250929",
     temperature: 0,

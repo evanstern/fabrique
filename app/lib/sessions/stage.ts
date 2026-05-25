@@ -12,3 +12,15 @@ export async function setStage(
     .collection<Session>(SESSIONS)
     .updateOne({ session_id }, { $set: { stage } });
 }
+
+export async function transitionStage(
+  session_id: string,
+  from: SessionStage,
+  to: SessionStage,
+): Promise<boolean> {
+  const db = await getDb();
+  const result = await db
+    .collection<Session>(SESSIONS)
+    .updateOne({ session_id, stage: from }, { $set: { stage: to } });
+  return result.modifiedCount === 1;
+}
