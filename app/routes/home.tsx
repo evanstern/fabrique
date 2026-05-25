@@ -73,7 +73,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
               <p className="font-display-label text-xs font-medium uppercase tracking-[0.26em] text-muted-foreground">
                 page-making workspace
               </p>
-              <h1 className="font-body text-5xl font-light leading-tight tracking-tight sm:text-6xl lg:text-7xl">
+              <h1 className="font-display-label text-2xl font-medium uppercase leading-snug tracking-[0.14em] sm:text-3xl">
                 What page are we making today?
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
