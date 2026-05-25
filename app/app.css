@@ -56,6 +56,25 @@
 }
 
 @layer base {
+  :root {
+    --font-brand: "IBM Plex Serif", ui-serif, Georgia, Cambria, "Times New Roman",
+      Times, serif;
+    --font-body: "Source Sans 3", "IBM Plex Sans", ui-sans-serif, system-ui,
+      sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+      "Noto Color Emoji";
+    --font-label: "Geist", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif,
+      "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-display-label: "Space Grotesk", "IBM Plex Sans", ui-sans-serif,
+      system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+      "Noto Color Emoji";
+    --font-sans: var(--font-body);
+    --font-serif: var(--font-brand);
+    --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas,
+      "Liberation Mono", monospace;
+    --font-heading: var(--font-body);
+    --font-wordmark: var(--font-brand);
+  }
+
   :root,
   html[data-theme="light"] {
     color-scheme: light;
@@ -201,7 +220,7 @@
       linear-gradient(135deg, color-mix(in srgb, var(--card) 82%, transparent), color-mix(in srgb, var(--panel) 76%, transparent)),
       var(--color-background);
     color: var(--color-foreground);
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
     font-size: 16px;
     line-height: 1.6;
   }
@@ -209,10 +228,32 @@
   h1,
   h2,
   h3 {
-    font-family: var(--font-sans);
+    font-family: var(--font-heading);
     font-weight: 500;
     letter-spacing: -0.025em;
     text-wrap: balance;
+  }
+
+  .font-serif {
+    font-family: var(--font-wordmark);
+  }
+
+  .font-brand {
+    font-family: var(--font-brand);
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+
+  .font-label,
+  .text-muted-foreground,
+  ::placeholder {
+    font-family: var(--font-label);
+  }
+
+  .font-display-label {
+    font-family: var(--font-display-label);
   }
 
   code,

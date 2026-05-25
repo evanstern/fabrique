@@ -296,10 +296,10 @@ export default function SessionPage({
   return (
     <main className="min-h-screen text-foreground">
       <div className="sticky top-0 z-20 flex min-h-14 items-center justify-between border-b border-border bg-panel px-5 text-panel-foreground shadow-soft sm:px-6">
-        <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+        <p className="font-display-label text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
           <a
             href="/"
-            className="text-foreground underline decoration-border underline-offset-4 transition hover:text-accent hover:decoration-accent"
+            className="font-brand text-foreground underline decoration-border underline-offset-4 transition hover:text-accent hover:decoration-accent"
           >
             fabrique
           </a>{" "}
@@ -495,7 +495,7 @@ function Brief({ session }: { session: Route.ComponentProps["loaderData"]["sessi
       )}
       {b.goals.length > 0 ? (
         <div>
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+          <h3 className="font-display-label text-xs uppercase tracking-wider text-muted-foreground mb-1">
             Goals
           </h3>
           <ul className="list-disc pl-5 space-y-1">
@@ -507,7 +507,7 @@ function Brief({ session }: { session: Route.ComponentProps["loaderData"]["sessi
       ) : null}
       {b.constraints.length > 0 ? (
         <div>
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+          <h3 className="font-display-label text-xs uppercase tracking-wider text-muted-foreground mb-1">
             Constraints
           </h3>
           <ul className="list-disc pl-5 space-y-1">
@@ -703,7 +703,7 @@ function ChatMessage({
 
   return (
     <article className={`space-y-3 border p-4 shadow-soft ${radiusClass} ${layoutClass} ${toneClass}`}>
-      <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="font-display-label text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
         {eyebrow}
       </p>
       {children}
@@ -726,10 +726,10 @@ function PreviewPane({
       <div className="flex min-h-24 items-center border-b border-border px-5 py-4 sm:px-6">
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+            <p className="font-display-label text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
               live preview
             </p>
-            <h2 className="mt-2 font-serif text-2xl font-light tracking-tight">
+            <h2 className="mt-2 font-body text-2xl font-light tracking-tight">
               Preview {targetPreviewId}
             </h2>
           </div>
@@ -767,10 +767,10 @@ function PublishedPreview({ artifactUrl }: { artifactUrl: string }) {
   return (
     <section className="flex flex-1 flex-col items-center justify-center text-center">
       <div className="max-w-md space-y-4 rounded-lg border border-success/35 bg-success/10 p-8 shadow-soft">
-        <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+        <p className="font-display-label text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
           published page
         </p>
-        <h2 className="font-serif text-4xl font-light tracking-tight">
+        <h2 className="font-body text-4xl font-light tracking-tight">
           Your page is live.
         </h2>
         <p className="break-all font-mono text-sm text-muted-foreground">
@@ -794,17 +794,17 @@ function PreviewPlaceholder({ stage }: { stage: string }) {
     <section className="flex flex-1 flex-col">
       <div className="flex min-h-24 items-center border-b border-border px-5 py-4 sm:px-6">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+          <p className="font-display-label text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
             preview workspace
           </p>
-          <h2 className="mt-2 font-serif text-2xl font-light tracking-tight">
+          <h2 className="mt-2 font-body text-2xl font-light tracking-tight">
             The canvas will appear here.
           </h2>
         </div>
       </div>
       <div className="flex flex-1 items-center justify-center">
         <div className="w-full max-w-xl text-center">
-          <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="font-display-label text-sm uppercase tracking-[0.2em] text-muted-foreground">
             current stage: {stage}
           </p>
           <div className="mx-auto mt-8 grid max-w-sm gap-3 text-left">
