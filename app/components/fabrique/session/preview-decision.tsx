@@ -45,8 +45,8 @@ export function PreviewDecision({
 
       <div className="mt-auto border-t border-border pt-4">
         <p className="text-xs leading-5 text-muted-foreground">
-          Only approve when this preview is ready to publish. This skips another
-          revision pass.
+          Publish preview {targetPreviewId} only when it is ready to go live.
+          Publishing stops revision events for this session.
         </p>
         <Form method="post" className="mt-3">
           <button
@@ -54,9 +54,9 @@ export function PreviewDecision({
             name="action"
             value="approve"
             disabled={submitting}
-            className="rounded-md border border-success/40 bg-transparent px-3 py-1.5 text-xs font-medium text-success transition hover:bg-success/10 disabled:opacity-50"
+            className="rounded-md bg-success px-4 py-2 text-sm font-semibold text-success-foreground transition hover:bg-success/90 disabled:opacity-50"
           >
-            Approve and publish
+            Publish this preview
           </button>
         </Form>
       </div>

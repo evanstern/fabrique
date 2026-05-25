@@ -14,7 +14,7 @@ export function PreviewPane({
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
             <p className="font-display-label text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              live preview
+              sandboxed preview
             </p>
             <h2 className="mt-2 font-body text-2xl font-light tracking-tight">
               Preview {targetPreviewId}
@@ -27,7 +27,7 @@ export function PreviewPane({
               rel="noreferrer"
               className="w-fit rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-ring"
             >
-              Open in new tab
+              Open exact artifact
             </a>
           ) : null}
         </div>
