@@ -1,6 +1,10 @@
 import { redirect, Form, useNavigation } from "react-router";
 import type { Route } from "./+types/home";
-import { createSession, listSessionNavigationSummaries } from "@sessions";
+import {
+  createSession,
+  listSessionNavigationSummaries,
+  setRawInput,
+} from "@sessions";
 import { requireAuth } from "@auth";
 import { useThemeMode } from "~/lib/client/use-theme-mode";
 
@@ -26,6 +30,7 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const session = await createSession();
+  await setRawInput(session.session_id, raw_input);
   const params = new URLSearchParams({ initial_brief: raw_input });
   return redirect(`/s/${session.session_id}?${params.toString()}`);
 }
