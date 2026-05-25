@@ -56,7 +56,8 @@
 }
 
 @layer base {
-  :root {
+  :root,
+  html[data-theme="light"] {
     color-scheme: light;
     --background: #f7f3eb;
     --foreground: #1f1c18;
@@ -102,7 +103,7 @@
   }
 
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme]) {
       color-scheme: dark;
       --background: #10100f;
       --foreground: #ece7df;
@@ -142,6 +143,47 @@
         0 28px 90px rgb(0 0 0 / 0.42);
       --shadow-ambient-token: 0 42px 130px rgb(0 0 0 / 0.48);
     }
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --background: #10100f;
+    --foreground: #ece7df;
+    --muted: #20201e;
+    --muted-foreground: #a8a098;
+    --card: #171715;
+    --card-foreground: #f0ebe3;
+    --popover: #1b1b19;
+    --popover-foreground: #f0ebe3;
+    --primary: #f3eee5;
+    --primary-foreground: #161512;
+    --secondary: #262521;
+    --secondary-foreground: #e7e1d8;
+    --accent: #d18a62;
+    --accent-foreground: #21130c;
+    --border: #32312d;
+    --input: #3d3b35;
+    --input-background: #151512;
+    --ring: #d7a27f;
+    --destructive: #e07d70;
+    --destructive-foreground: #2b100d;
+    --panel: #151513;
+    --panel-foreground: #ebe5dc;
+    --panel-muted: #20201d;
+    --sidebar: #131311;
+    --sidebar-foreground: #eee8df;
+    --preview: #1b1a17;
+    --preview-foreground: #eee8df;
+    --success: #8fac8a;
+    --success-foreground: #101b10;
+    --warning: #d9a15f;
+    --warning-foreground: #211406;
+    --info: #97b2c2;
+    --info-foreground: #0d1820;
+    --shadow-soft-token: 0 18px 60px rgb(0 0 0 / 0.34);
+    --shadow-panel-token: 0 1px 0 rgb(255 255 255 / 0.06) inset,
+      0 28px 90px rgb(0 0 0 / 0.42);
+    --shadow-ambient-token: 0 42px 130px rgb(0 0 0 / 0.48);
   }
 
   html {

@@ -57,32 +57,27 @@ export default function Home({ actionData }: Route.ComponentProps) {
             What page are we making today?
           </h1>
           <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-            Start with the plain-language version. Fabrique will clarify the
-            brief, draft a preview, and keep the workflow visible as it moves.
+            Start with one thoughtful sentence about the page you want, and
+            Fabrique will shape the brief from there.
           </p>
         </header>
 
         <Form
           method="post"
-          className="mx-auto mt-10 max-w-3xl space-y-4 rounded-3xl border border-border bg-card p-3 text-card-foreground shadow-panel"
+          className="mx-auto mt-10 max-w-3xl space-y-4"
         >
-          <div className="rounded-2xl border border-input bg-input-background p-4 shadow-soft transition focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
-            <textarea
-              name="raw_input"
-              rows={7}
-              required
-              placeholder="A launch page for my friend's Brooklyn bakery: warm, editorial, one clear catering inquiry button..."
-              className="min-h-40 w-full resize-none border-0 bg-transparent text-base leading-7 text-foreground placeholder:text-muted-foreground focus:outline-none"
-              disabled={submitting}
-            />
-          </div>
+          <textarea
+            name="raw_input"
+            rows={7}
+            required
+            placeholder="A launch page for my friend's Brooklyn bakery: warm, editorial, one clear catering inquiry button..."
+            className="min-h-40 w-full resize-none rounded-2xl border border-input bg-input-background px-5 py-4 text-base leading-7 text-foreground shadow-soft transition placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
+            disabled={submitting}
+          />
           {actionData?.error ? (
             <p className="px-2 text-sm text-destructive">{actionData.error}</p>
           ) : null}
-          <div className="flex flex-col gap-3 px-1 pb-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">
-              One thoughtful paragraph is enough to begin.
-            </p>
+          <div className="flex justify-end px-1 pb-1">
             <button
               type="submit"
               disabled={submitting}
