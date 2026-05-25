@@ -51,7 +51,7 @@ export const applyRevision: GraphNode = async (state) => {
   const priorHtml = await withProgress(
     state.session_id,
     "apply_revision",
-    "reading_review_notes",
+    "loading_current_preview",
     () => readFile(priorHtmlPath, "utf8"),
   );
 
