@@ -23,7 +23,7 @@ export function Clarification({
               type="text"
               disabled={submitting}
               placeholder="Type your answer here"
-              className="w-full rounded-lg border border-input bg-input-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/35"
+              className="w-full rounded-[6px] border border-input bg-input-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/35"
             />
           </div>
         ))}
