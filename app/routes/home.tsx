@@ -2,6 +2,7 @@ import { redirect, Form, useNavigation } from "react-router";
 import type { Route } from "./+types/home";
 import { createSession, listSessionNavigationSummaries } from "@sessions";
 import { requireAuth } from "@auth";
+import { useThemeMode } from "~/lib/client/use-theme-mode";
 
 export function meta(_args: Route.MetaArgs) {
   return [
@@ -33,6 +34,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
   const navigation = useNavigation();
   const submitting = navigation.state === "submitting";
   const { sessions } = loaderData;
+  const { theme, toggleTheme } = useThemeMode();
 
   return (
     <main className="min-h-screen px-5 py-8 text-foreground sm:px-6 lg:px-8">
@@ -41,14 +43,23 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
           <a href="/" className="font-brand text-2xl font-light tracking-tight">
             fabrique
           </a>
-          <form action="/logout" method="post">
+          <div className="flex items-center gap-2">
             <button
-              type="submit"
+              type="button"
+              onClick={toggleTheme}
               className="rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground transition hover:border-ring hover:text-foreground"
             >
-              Sign out
+              {theme === "dark" ? "Light" : "Dark"}
             </button>
-          </form>
+            <form action="/logout" method="post">
+              <button
+                type="submit"
+                className="rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground transition hover:border-ring hover:text-foreground"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
