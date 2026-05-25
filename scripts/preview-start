@@ -44,7 +44,10 @@ hostname="$(preview_hostname "${slug}")"
 service_name="$(preview_service_name "${slug}")"
 unit_path="$(preview_unit_path "${slug}")"
 branch="$(preview_branch_for_worktree "${worktree}")"
+artifacts_dir="$(preview_artifacts_dir "${worktree}")"
 now="$(preview_now)"
+preview_validate_systemd_path "${artifacts_dir}"
+mkdir -p "${artifacts_dir}"
 
 mkdir -p "$(dirname "${unit_path}")"
 cat >"${unit_path}" <<EOF
@@ -58,7 +61,7 @@ WorkingDirectory=${worktree}
 EnvironmentFile=-${worktree}/.env
 Environment=NODE_ENV=development
 Environment=PUBLIC_URL=https://${hostname}
-Environment=ARTIFACTS_DIR=${worktree}/artifacts
+Environment=ARTIFACTS_DIR=${artifacts_dir}
 Environment=FABRIQUE_ALLOWED_HOSTS=${hostname},dev-fabrique.infinitynode.ai,localhost
 ExecStart=${pnpm_path} exec react-router dev --host 0.0.0.0 --port ${port}
 Restart=on-failure

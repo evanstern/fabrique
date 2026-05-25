@@ -82,8 +82,10 @@ The generated service sets:
 
 - `NODE_ENV=development`
 - `PUBLIC_URL=https://<slug>-fabrique.infinitynode.ai`
-- `ARTIFACTS_DIR=<worktree>/artifacts`
+- `ARTIFACTS_DIR=<project>/dev/artifacts` by default, or `FABRIQUE_PREVIEW_ARTIFACTS_DIR` when set before starting the preview
 - `FABRIQUE_ALLOWED_HOSTS=<slug>-fabrique.infinitynode.ai,dev-fabrique.infinitynode.ai,localhost`
+
+Branch previews intentionally share the development artifact directory because they also share the development Mongo session records. Keeping artifacts in `dev/artifacts` avoids orphaned preview records when a feature worktree has an empty local `artifacts/` directory.
 
 Secrets such as `MONGO_URL`, `ANTHROPIC_API_KEY`, `FABRIQUE_PASSWORD`, and `FABRIQUE_AUTH_SECRET` are read from the preview worktree's `.env` file when present.
 

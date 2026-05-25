@@ -21,6 +21,8 @@ The script:
 
 The generated service loads `<worktree>/.env` if it exists and sets preview-specific defaults for `PUBLIC_URL`, `ARTIFACTS_DIR`, and `FABRIQUE_ALLOWED_HOSTS`.
 
+By default, branch previews share the sibling `dev/artifacts` directory rather than each worktree's local `artifacts/` directory. That keeps feature previews aligned with the shared development Mongo session records, whose artifact URLs point at durable files outside an individual worktree. Override with `FABRIQUE_PREVIEW_ARTIFACTS_DIR=/path/to/artifacts` if the environment uses a global artifact volume.
+
 ### `preview-list`
 
 Prints registered previews as a table with slug, branch, port, hostname, service name, and worktree path. If the registry is missing or empty, it exits successfully with a message.

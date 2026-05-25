@@ -54,6 +54,13 @@ preview_unit_path() {
   printf '%s/%s.service\n' "$(preview_systemd_dir)" "$(preview_service_name "${slug}")"
 }
 
+preview_artifacts_dir() {
+  local worktree="$1"
+  local project_dir
+  project_dir="$(dirname "${worktree}")"
+  printf '%s\n' "${FABRIQUE_PREVIEW_ARTIFACTS_DIR:-${project_dir}/dev/artifacts}"
+}
+
 preview_ensure_registry() {
   local registry="$1"
   mkdir -p "$(dirname "${registry}")"
