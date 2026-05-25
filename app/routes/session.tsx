@@ -1,7 +1,7 @@
 import { useNavigation } from "react-router";
 import type { Route } from "./+types/session";
 import { Command } from "@langchain/langgraph";
-import { getPublishedPreview, getSession } from "@sessions";
+import { getPublishedPreview, getSession, setRawInput } from "@sessions";
 import { getGraph, getPendingInterrupt } from "@graph";
 import { publishSnapshot } from "@stream";
 import { requireAuth } from "@auth";
@@ -23,6 +23,13 @@ import { useThemeMode } from "~/lib/client/use-theme-mode";
 
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `fabrique — ${params.id}` }];
+}
+
+function formatClarificationAnswers(answers: Record<string, string>): string {
+  return Object.entries(answers)
+    .flatMap(([question, answer]) => [`Q: ${question}`, `A: ${answer}`, ``])
+    .join("\n")
+    .trimEnd();
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -68,6 +75,30 @@ export async function action({ request, params }: Route.ActionArgs) {
     await graph.invoke(new Command({ resume: answers }), {
       configurable: { thread_id: params.id },
     });
+    await publishSnapshot(params.id);
+    return { ok: true };
+  }
+
+  if (
+    session.stage === "briefing" &&
+    session.brief.open_questions.length > 0 &&
+    !pending
+  ) {
+    const answers: Record<string, string> = {};
+    for (const question of session.brief.open_questions) {
+      const value = String(form.get(question) ?? "").trim();
+      if (value !== "") answers[question] = value;
+    }
+    if (Object.keys(answers).length === 0) {
+      return { error: "Please answer at least one question." };
+    }
+
+    const raw_input = `${session.brief.raw_input}\n\n${formatClarificationAnswers(answers)}`;
+    await setRawInput(session.session_id, raw_input);
+    await graph.invoke(
+      { session_id: session.session_id, raw_input },
+      { configurable: { thread_id: session.session_id } },
+    );
     await publishSnapshot(params.id);
     return { ok: true };
   }
@@ -135,6 +166,12 @@ export default function SessionPage({
       ? live.interrupt
       : null;
   const previewArtifactId = live.records.previews.at(-1)?.artifact_id ?? null;
+  const fallbackQuestions =
+    live.stage === "briefing" &&
+    !live.interrupt &&
+    session.brief.open_questions.length > 0
+      ? session.brief.open_questions
+      : null;
   const submittingRevision =
     submitting && previewInterrupt !== null && reviewAction === "revise";
 
@@ -246,6 +283,22 @@ export default function SessionPage({
               </ChatMessage>
             ) : null}
 
+            {fallbackQuestions ? (
+              <ChatMessage eyebrow="Clarification" tone="warning" square>
+                {submitting ? (
+                  <ClarificationSkeleton progress={progress} />
+                ) : (
+                  <Clarification
+                    questions={fallbackQuestions}
+                    submitting={submitting}
+                    error={
+                      actionData && "error" in actionData ? actionData.error : null
+                    }
+                  />
+                )}
+              </ChatMessage>
+            ) : null}
+
             {previewInterrupt ? (
               <ChatMessage eyebrow="Review" tone="info" square fill>
                 {submittingRevision ? (
@@ -276,7 +329,10 @@ export default function SessionPage({
               </ChatMessage>
             ) : null}
 
-            {!showingInitialProgress && !live.interrupt && live.stage === "briefing" ? (
+            {!showingInitialProgress &&
+            !live.interrupt &&
+            !fallbackQuestions &&
+            live.stage === "briefing" ? (
               <ChatMessage eyebrow="Next" tone="success">
                 <ReadyForDesign />
               </ChatMessage>
