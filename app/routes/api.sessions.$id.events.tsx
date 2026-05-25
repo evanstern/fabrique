@@ -1,8 +1,9 @@
 import { Command } from "@langchain/langgraph";
 import type { Route } from "./+types/api.sessions.$id.events";
-import { getSession, setRawInput } from "@sessions";
+import { appendClarification, getSession, setRawInput } from "@sessions";
 import { getGraph, getPendingInterrupt } from "@graph";
 import { publishSnapshot } from "@stream";
+import { nextSequentialId } from "@records";
 import {
   ReviewPreviewEventSchema,
   type ReviewPreviewEvent,
@@ -141,6 +142,16 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
 
     const graph = await getGraph();
+    await appendClarification(session.session_id, {
+      clarification_id: nextSequentialId(
+        "clarification",
+        session.records.clarifications?.length ?? 0,
+      ),
+      context: session.stage === "preview_ready" ? "revision" : "brief",
+      questions: pending.questions,
+      answers: event.answers,
+      created_at: new Date(),
+    });
     await graph.invoke(new Command({ resume: event.answers }), {
       configurable: { thread_id: session.session_id },
     });

@@ -1,5 +1,10 @@
 // Canonical Mongo session document shape and workflow stage vocabulary.
-import type { ArtifactRecord, PreviewRecord, ReviewRecord } from "@records";
+import type {
+  ArtifactRecord,
+  ClarificationRecord,
+  PreviewRecord,
+  ReviewRecord,
+} from "@records";
 
 // Schema lock: gigi/wiki/decisions/v1-session-document.md
 /** Session stage vocabulary for the canonical Mongo session document. */
@@ -25,6 +30,7 @@ export type Session = {
     previews: PreviewRecord[];
     reviews: ReviewRecord[];
     artifacts: ArtifactRecord[];
+    clarifications?: ClarificationRecord[];
   };
 };
 

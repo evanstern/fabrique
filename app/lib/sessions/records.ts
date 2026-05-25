@@ -1,6 +1,11 @@
 // Session record mutation helpers for previews and review decisions.
 import { getDb } from "@db";
-import type { ArtifactRecord, PreviewRecord, ReviewRecord } from "@records";
+import type {
+  ArtifactRecord,
+  ClarificationRecord,
+  PreviewRecord,
+  ReviewRecord,
+} from "@records";
 import { SESSIONS, type Session, type SessionStage } from "./types";
 
 /** Append a generated preview artifact and its preview record to the session. */
@@ -47,6 +52,19 @@ export async function setReviewNotes(
     { session_id, "records.reviews.review_id": review_id },
     {
       $set: { "records.reviews.$.notes": notes },
+    },
+  );
+}
+
+export async function appendClarification(
+  session_id: string,
+  clarification: ClarificationRecord,
+): Promise<void> {
+  const db = await getDb();
+  await db.collection<Session>(SESSIONS).updateOne(
+    { session_id },
+    {
+      $push: { "records.clarifications": clarification },
     },
   );
 }
