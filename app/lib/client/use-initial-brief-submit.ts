@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useFetcher } from "react-router";
 import type { Dispatch, SetStateAction } from "react";
 import type { ProgressState } from "./session-progress";
 
@@ -7,6 +8,8 @@ type InitialSubmitState =
   | { status: "submitting" }
   | { status: "submitted" }
   | { status: "error"; message: string };
+
+type SubmitBriefResponse = { error?: string } | null;
 
 export function useInitialBriefSubmit({
   initialBrief,
@@ -17,6 +20,7 @@ export function useInitialBriefSubmit({
   sessionId: string;
   setProgress: Dispatch<SetStateAction<ProgressState | null>>;
 }) {
+  const fetcher = useFetcher<SubmitBriefResponse>();
   const [initialSubmitState, setInitialSubmitState] =
     useState<InitialSubmitState>({ status: "idle" });
   const submittedInitialBriefRef = useRef<string | null>(null);
@@ -38,33 +42,27 @@ export function useInitialBriefSubmit({
       status: "started",
     });
 
-    void fetch(`/api/sessions/${sessionId}/events`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ type: "submit_brief", raw_input: initialBrief }),
-    }).then(
-      async (response) => {
-        if (!response.ok) {
-          let message = "Could not start the brief. Please try again.";
-          const body = (await response.json().catch(() => null)) as {
-            error?: unknown;
-          } | null;
-          if (body) {
-            if (typeof body.error === "string") message = body.error;
-          }
-          setInitialSubmitState({ status: "error", message });
-          return;
-        }
-        setInitialSubmitState({ status: "submitted" });
-      },
-      () => {
-        setInitialSubmitState({
-          status: "error",
-          message: "Could not start the brief. Please try again.",
-        });
+    fetcher.submit(
+      { type: "submit_brief", raw_input: initialBrief },
+      {
+        action: `/api/sessions/${sessionId}/events`,
+        encType: "application/json",
+        method: "post",
       },
     );
-  }, [initialBrief, sessionId, setProgress]);
+  }, [fetcher, initialBrief, sessionId, setProgress]);
+
+  useEffect(() => {
+    if (fetcher.state !== "idle") return;
+    if (initialSubmitState.status !== "submitting") return;
+
+    if (fetcher.data?.error) {
+      setInitialSubmitState({ status: "error", message: fetcher.data.error });
+      return;
+    }
+
+    setInitialSubmitState({ status: "submitted" });
+  }, [fetcher.data, fetcher.state, initialSubmitState.status]);
 
   return initialSubmitState;
 }
