@@ -57,6 +57,8 @@ artifacts/<session_id>/<artifact_id>.html
 
 The Docker stack mounts `./artifacts` into `/app/artifacts`, preserving generated pages across container restarts. Artifact files are served only after the request passes auth and the corresponding session document contains the artifact record.
 
+Artifact records live in Mongo while the HTML files live on the mounted filesystem. If an artifact URL returns 404 after a restore, bad mount, or preview cleanup, first verify that the expected file exists at `artifacts/<session_id>/<artifact_id>.html` on the running host and that the container has the artifacts volume mounted at `/app/artifacts`. The v1 operator recovery path is to restore the missing file from backup or regenerate the affected session preview; do not delete Mongo artifact records unless the session itself is being intentionally discarded.
+
 ## Authentication
 
 Fabrique uses a shared password gate. Any authenticated user can access the app surface, sessions, and artifacts. Auth cookies are signed with `FABRIQUE_AUTH_SECRET`; rotating that secret logs everyone out.

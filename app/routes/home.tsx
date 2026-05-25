@@ -83,7 +83,10 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
             </header>
 
             <Form method="post" className="mt-10 max-w-3xl space-y-4">
-              <label htmlFor="raw_input" className="sr-only">
+              <label
+                htmlFor="raw_input"
+                className="block px-1 text-sm font-medium text-muted-foreground"
+              >
                 What page are we making today?
               </label>
               <textarea
