@@ -1,16 +1,25 @@
-import { useEffect, useState } from "react";
-import { Form, useNavigation } from "react-router";
+import { useNavigation } from "react-router";
 import type { Route } from "./+types/session";
 import { Command } from "@langchain/langgraph";
-import { getPublishedPreview, getSession } from "../lib/sessions.server";
-import {
-  getGraph,
-  getPendingInterrupt,
-  type PendingInterrupt,
-} from "../lib/graph.server";
-import { publishSnapshot } from "../lib/sse-hub.server";
-import type { SessionSnapshot } from "../lib/snapshots.server";
-import { requireAuth } from "../lib/auth.server";
+import { getPublishedPreview, getSession } from "@sessions";
+import { getGraph, getPendingInterrupt } from "@graph";
+import { publishSnapshot } from "@stream";
+import { requireAuth } from "@auth";
+import { Brief } from "~/components/fabrique/session/brief";
+import { ChatMessage } from "~/components/fabrique/session/chat-message";
+import { Clarification } from "~/components/fabrique/session/clarification";
+import { ClarificationSkeleton } from "~/components/fabrique/session/clarification-skeleton";
+import { InitialSubmitError } from "~/components/fabrique/session/initial-submit-error";
+import { PreviewDecision } from "~/components/fabrique/session/preview-decision";
+import { PreviewPane } from "~/components/fabrique/session/preview-pane";
+import { PreviewPlaceholder } from "~/components/fabrique/session/preview-placeholder";
+import { Published } from "~/components/fabrique/session/published";
+import { PublishedPreview } from "~/components/fabrique/session/published-preview";
+import { ReadyForDesign } from "~/components/fabrique/session/ready-for-design";
+import { useCopyState } from "~/lib/client/use-copy-state";
+import { useInitialBriefSubmit } from "~/lib/client/use-initial-brief-submit";
+import { useLiveSession } from "~/lib/client/use-live-session";
+import { useThemeMode } from "~/lib/client/use-theme-mode";
 
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `fabrique — ${params.id}` }];
@@ -18,13 +27,19 @@ export function meta({ params }: Route.MetaArgs) {
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   requireAuth(request);
+  const url = new URL(request.url);
   const session = await getSession(params.id);
   if (!session) {
     throw new Response("session not found", { status: 404 });
   }
   const interrupt = await getPendingInterrupt(params.id);
   const published = getPublishedPreview(session);
-  return { session, interrupt, published };
+  return {
+    session,
+    interrupt,
+    published,
+    initialBrief: url.searchParams.get("initial_brief"),
+  };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -85,369 +100,204 @@ export async function action({ request, params }: Route.ActionArgs) {
   return { error: "Unhandled pending interrupt." };
 }
 
-type LiveState = {
-  stage: string;
-  interrupt: PendingInterrupt | null;
-};
-
-type ProgressState = {
-  node: string;
-  phase: string;
-  status: "started" | "streaming" | "complete";
-  tick?: number;
-};
-
-function phaseLabel(phase: string | null): string {
-  if (phase === "refining_brief") return "Refining your brief";
-  if (phase === "checking_readiness")
-    return "Checking if I can start designing";
-  return "Thinking";
-}
 
 export default function SessionPage({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const { session, interrupt: initialInterrupt, published } = loaderData;
+  const { session, interrupt: initialInterrupt, published, initialBrief } =
+    loaderData;
   const navigation = useNavigation();
   const submitting = navigation.state === "submitting";
+  const reviewAction = navigation.formData?.get("action");
 
-  const [live, setLive] = useState<LiveState>({
-    stage: session.stage,
-    interrupt: initialInterrupt,
+  const { live, progress, setProgress } = useLiveSession({
+    session,
+    initialInterrupt,
+    submitting,
   });
-  const [progress, setProgress] = useState<ProgressState | null>(null);
+  const initialSubmitState = useInitialBriefSubmit({
+    initialBrief,
+    sessionId: session.session_id,
+    setProgress,
+  });
+  const { copyState, copyText: copyTextToClipboard } = useCopyState();
+  const { copyState: publishedCopyState, copyText: copyPublishedToClipboard } =
+    useCopyState();
+  const { theme, toggleTheme } = useThemeMode();
 
-  useEffect(() => {
-    const es = new EventSource(`/api/sessions/${session.session_id}/stream`);
-    es.onmessage = (ev) => {
-      try {
-        const snap = JSON.parse(ev.data) as SessionSnapshot;
-        setLive({ stage: snap.stage, interrupt: snap.interrupt });
-        setProgress(null);
-      } catch {
-        // Bad payload from server is not actionable here; ignore.
-      }
-    };
-    es.addEventListener("progress", (ev) => {
-      try {
-        const p = JSON.parse((ev as MessageEvent).data) as ProgressState;
-        setProgress(p);
-      } catch {
-        // Bad payload from server is not actionable here; ignore.
-      }
-    });
-    es.onerror = () => {
-      // Browser auto-reconnects; nothing useful to do per-message.
-    };
-    return () => es.close();
-  }, [session.session_id]);
+  const showingInitialProgress =
+    initialSubmitState.status === "submitting" && !live.interrupt;
+  const previewInterrupt =
+    live.stage === "preview_ready" &&
+    live.interrupt &&
+    live.interrupt.kind === "review_preview"
+      ? live.interrupt
+      : null;
+  const previewArtifactId = live.records.previews.at(-1)?.artifact_id ?? null;
+  const submittingRevision =
+    submitting && previewInterrupt !== null && reviewAction === "revise";
 
-  useEffect(() => {
-    if (!submitting) {
-      setProgress(null);
-    }
-  }, [submitting]);
+  function copyCurrentUrl() {
+    if (typeof window === "undefined") return;
+    void copyTextToClipboard(window.location.href);
+  }
+
+  function copyPublishedUrl(artifactUrl: string) {
+    void copyPublishedToClipboard(artifactUrl);
+  }
 
   return (
-    <main className="min-h-screen px-6 py-12">
-      <div className="max-w-2xl mx-auto space-y-8">
-        <header className="space-y-1">
-          <div className="flex items-start justify-between">
-            <p className="text-xs uppercase tracking-wider text-gray-500">
-              fabrique session
-            </p>
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="text-xs text-gray-500 underline"
-              >
-                Sign out
-              </button>
-            </form>
+    <main className="min-h-screen text-foreground">
+      <div className="sticky top-0 z-20 flex min-h-14 items-center justify-between border-b border-border bg-panel px-5 text-panel-foreground shadow-soft sm:px-6">
+        <p className="font-display-label text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+          <a
+            href="/"
+            className="font-brand text-foreground underline decoration-border underline-offset-4 transition hover:text-accent hover:decoration-accent"
+          >
+            fabrique
+          </a>{" "}
+          session
+        </p>
+        <div className="flex items-center gap-2">
+          <a
+            href={`/s/${session.session_id}/snapshots`}
+            className="rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition hover:border-ring hover:text-foreground"
+          >
+            State
+          </a>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition hover:border-ring hover:text-foreground"
+          >
+            {theme === "dark" ? "Light" : "Dark"}
+          </button>
+          <form action="/logout" method="post">
+            <button
+              type="submit"
+              className="rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition hover:border-ring hover:text-foreground"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
+      </div>
+      <div className="flex min-h-[calc(100vh-3.5rem)] w-full flex-col overflow-hidden bg-panel shadow-ambient lg:grid lg:grid-cols-[minmax(22rem,0.9fr)_minmax(0,1.35fr)]">
+        <section className="flex min-h-[36rem] flex-col border-b border-border bg-sidebar text-sidebar-foreground lg:border-b-0 lg:border-r">
+          <header className="flex min-h-24 items-center border-b border-border px-5 py-4 sm:px-6">
+            <div className="w-full space-y-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+                <h1 className="max-w-sm truncate font-mono text-sm font-medium tracking-tight sm:text-base">
+                  {session.session_id}
+                </h1>
+                <button
+                  type="button"
+                  onClick={copyCurrentUrl}
+                  className="w-fit text-xs font-medium text-muted-foreground underline decoration-border underline-offset-4 transition hover:text-foreground"
+                >
+                  {copyState === "copied"
+                    ? "Copied URL"
+                    : copyState === "error"
+                      ? "Copy failed"
+                      : "Copy URL"}
+                </button>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
+                <span className="size-2 rounded-full bg-accent" />
+                stage: {live.stage}
+              </div>
+            </div>
+          </header>
+
+          <div className="flex flex-1 flex-col overflow-y-auto">
+            <ChatMessage eyebrow="Brief" tone="neutral" square transparent>
+              <Brief session={session} />
+            </ChatMessage>
+
+            {showingInitialProgress ? (
+              <ChatMessage eyebrow="Fabrique" tone="warning" square>
+                <ClarificationSkeleton
+                  progress={progress}
+                  title="Starting your brief"
+                />
+              </ChatMessage>
+            ) : null}
+
+            {initialSubmitState.status === "error" ? (
+              <ChatMessage eyebrow="Needs attention" tone="danger">
+                <InitialSubmitError message={initialSubmitState.message} />
+              </ChatMessage>
+            ) : null}
+
+            {live.interrupt && live.interrupt.kind === "answer_clarification" ? (
+              <ChatMessage eyebrow="Clarification" tone="warning" square>
+                {submitting ? (
+                  <ClarificationSkeleton progress={progress} />
+                ) : (
+                  <Clarification
+                    questions={live.interrupt.questions}
+                    submitting={submitting}
+                    error={
+                      actionData && "error" in actionData ? actionData.error : null
+                    }
+                  />
+                )}
+              </ChatMessage>
+            ) : null}
+
+            {previewInterrupt ? (
+              <ChatMessage eyebrow="Review" tone="info" square fill>
+                {submittingRevision ? (
+                  <ClarificationSkeleton
+                    progress={progress}
+                    title="Revising your preview"
+                  />
+                ) : (
+                  <PreviewDecision
+                    targetPreviewId={previewInterrupt.target_preview_id}
+                    submitting={submitting}
+                    error={
+                      actionData && "error" in actionData ? actionData.error : null
+                    }
+                  />
+                )}
+              </ChatMessage>
+            ) : null}
+
+            {live.stage === "published" && published ? (
+              <ChatMessage eyebrow="Published" tone="success" square fill>
+                <Published
+                  sessionId={session.session_id}
+                  artifactUrl={published.artifact.access.url}
+                  copyState={publishedCopyState}
+                  onCopy={copyPublishedUrl}
+                />
+              </ChatMessage>
+            ) : null}
+
+            {!showingInitialProgress && !live.interrupt && live.stage === "briefing" ? (
+              <ChatMessage eyebrow="Next" tone="success">
+                <ReadyForDesign />
+              </ChatMessage>
+            ) : null}
           </div>
-          <h1 className="text-2xl font-light tracking-tight">
-            {session.session_id}
-          </h1>
-          <p className="text-sm text-gray-500">stage: {live.stage}</p>
-        </header>
+        </section>
 
-        <Brief session={session} />
-
-        {live.interrupt && live.interrupt.kind === "answer_clarification" ? (
-          submitting ? (
-            <ClarificationSkeleton progress={progress} />
-          ) : (
-            <Clarification
-              questions={live.interrupt.questions}
-              submitting={submitting}
-              error={actionData && "error" in actionData ? actionData.error : null}
+        <aside className="flex min-h-[32rem] flex-col bg-preview text-preview-foreground">
+          {previewInterrupt ? (
+            <PreviewPane
+              sessionId={session.session_id}
+              targetPreviewId={previewInterrupt.target_preview_id}
+              artifactId={previewArtifactId}
             />
-          )
-        ) : null}
-
-        {live.stage === "published" && published ? (
-          <Published
-            sessionId={session.session_id}
-            artifactUrl={published.artifact.access.url}
-          />
-        ) : null}
-
-        {live.stage !== "published" &&
-        live.stage === "preview_ready" &&
-        live.interrupt &&
-        live.interrupt.kind === "review_preview" ? (
-          <PreviewReview
-            sessionId={session.session_id}
-            targetPreviewId={live.interrupt.target_preview_id}
-            artifactId={
-              session.records.previews.at(-1)?.artifact_id ?? null
-            }
-            submitting={submitting}
-            error={actionData && "error" in actionData ? actionData.error : null}
-          />
-        ) : null}
-
-        {!live.interrupt && live.stage === "briefing" ? (
-          <ReadyForDesign />
-        ) : null}
+          ) : live.stage === "published" && published ? (
+            <PublishedPreview artifactUrl={published.artifact.access.url} />
+          ) : (
+            <PreviewPlaceholder stage={live.stage} />
+          )}
+        </aside>
       </div>
     </main>
-  );
-}
-
-function Published({
-  sessionId,
-  artifactUrl,
-}: {
-  sessionId: string;
-  artifactUrl: string;
-}) {
-  return (
-    <section className="space-y-3 rounded-md border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 p-4">
-      <h2 className="text-sm uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-        Published
-      </h2>
-      <p className="text-base break-all font-mono">{artifactUrl}</p>
-      <a
-        href={artifactUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-block rounded-md bg-emerald-700 text-white px-4 py-2 text-sm font-medium"
-      >
-        View in new tab
-      </a>
-      <p className="text-xs text-gray-600 dark:text-gray-400">
-        The artifact URL above is the shareable page. This{" "}
-        <span className="font-mono">/s/{sessionId}</span> URL shows the workflow
-        that produced it.
-      </p>
-    </section>
-  );
-}
-
-function Brief({ session }: { session: Route.ComponentProps["loaderData"]["session"] }) {
-  const b = session.brief;
-  return (
-    <section className="space-y-4 rounded-md border border-gray-200 dark:border-gray-800 p-4">
-      <h2 className="text-sm uppercase tracking-wider text-gray-500">Brief</h2>
-      {b.summary ? (
-        <p className="text-base">{b.summary}</p>
-      ) : (
-        <p className="text-sm text-gray-500 italic">No summary yet.</p>
-      )}
-      {b.goals.length > 0 ? (
-        <div>
-          <h3 className="text-xs uppercase tracking-wider text-gray-500 mb-1">
-            Goals
-          </h3>
-          <ul className="list-disc pl-5 space-y-1">
-            {b.goals.map((g, i) => (
-              <li key={i}>{g}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {b.constraints.length > 0 ? (
-        <div>
-          <h3 className="text-xs uppercase tracking-wider text-gray-500 mb-1">
-            Constraints
-          </h3>
-          <ul className="list-disc pl-5 space-y-1">
-            {b.constraints.map((c, i) => (
-              <li key={i}>{c}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function Clarification({
-  questions,
-  submitting,
-  error,
-}: {
-  questions: string[];
-  submitting: boolean;
-  error: string | null | undefined;
-}) {
-  return (
-    <section className="space-y-4 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4">
-      <h2 className="text-sm uppercase tracking-wider text-amber-800 dark:text-amber-300">
-        A few questions
-      </h2>
-      <Form method="post" className="space-y-4">
-        {questions.map((q, i) => (
-          <div key={i} className="space-y-1">
-            <label className="block text-sm font-medium">{q}</label>
-            <input
-              name={q}
-              type="text"
-              disabled={submitting}
-              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
-          </div>
-        ))}
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-amber-700 text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >
-          {submitting ? "Sending..." : "Send answers"}
-        </button>
-      </Form>
-    </section>
-  );
-}
-
-function ClarificationSkeleton({
-  progress,
-}: {
-  progress: ProgressState | null;
-}) {
-  const [dots, setDots] = useState(1);
-  useEffect(() => {
-    const id = setInterval(() => {
-      setDots((d) => (d % 3) + 1);
-    }, 400);
-    return () => clearInterval(id);
-  }, []);
-
-  const label = phaseLabel(progress?.phase ?? null);
-  const ellipsis = ".".repeat(dots);
-
-  return (
-    <section className="space-y-3 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4">
-      <h2 className="text-sm uppercase tracking-wider text-amber-800 dark:text-amber-300">
-        Thinking about your answers
-      </h2>
-      <p className="text-base text-amber-900 dark:text-amber-200">
-        {label}
-        {ellipsis}
-      </p>
-      <div className="space-y-2 pt-2">
-        <div className="h-4 w-3/4 rounded bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
-        <div className="h-9 w-full rounded bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
-        <div className="h-4 w-2/3 rounded bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
-        <div className="h-9 w-full rounded bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
-      </div>
-    </section>
-  );
-}
-
-function PreviewReview({
-  sessionId,
-  targetPreviewId,
-  artifactId,
-  submitting,
-  error,
-}: {
-  sessionId: string;
-  targetPreviewId: string;
-  artifactId: string | null;
-  submitting: boolean;
-  error: string | null | undefined;
-}) {
-  const url = artifactId ? `/artifacts/${sessionId}/${artifactId}` : null;
-  return (
-    <section className="space-y-4 rounded-md border border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-950/30 p-4">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm uppercase tracking-wider text-sky-800 dark:text-sky-300">
-          Review preview {targetPreviewId}
-        </h2>
-        {url ? (
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs underline text-sky-800 dark:text-sky-300"
-          >
-            Open in new tab
-          </a>
-        ) : null}
-      </div>
-      {url ? (
-        <iframe
-          src={url}
-          sandbox=""
-          title={`preview ${targetPreviewId}`}
-          className="w-full h-[600px] rounded border border-gray-300 dark:border-gray-700 bg-white"
-        />
-      ) : (
-        <p className="text-sm text-gray-500 italic">No artifact attached.</p>
-      )}
-      <Form method="post" className="space-y-3">
-        <div className="space-y-1">
-          <label htmlFor="notes" className="block text-sm font-medium">
-            Notes (one per line)
-          </label>
-          <textarea
-            id="notes"
-            name="notes"
-            rows={4}
-            disabled={submitting}
-            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
-          />
-        </div>
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            name="action"
-            value="revise"
-            disabled={submitting}
-            className="rounded-md bg-amber-700 text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {submitting ? "Sending..." : "Revise"}
-          </button>
-          <button
-            type="submit"
-            name="action"
-            value="approve"
-            disabled={submitting}
-            className="rounded-md bg-emerald-700 text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {submitting ? "Sending..." : "Approve"}
-          </button>
-        </div>
-      </Form>
-    </section>
-  );
-}
-
-function ReadyForDesign() {
-  return (
-    <section className="rounded-md border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 p-4">
-      <h2 className="text-sm uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-        Ready to design
-      </h2>
-      <p className="text-sm mt-1">
-        The brief is good enough to start designing. Preview generation arrives
-        in the next slice.
-      </p>
-    </section>
   );
 }

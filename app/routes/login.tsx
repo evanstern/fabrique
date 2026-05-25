@@ -7,7 +7,7 @@ import {
   getClientIp,
   sanitizeNext,
   signAuthCookie,
-} from "../lib/auth.server";
+} from "@auth";
 
 export function meta() {
   return [{ title: "fabrique — sign in" }];
@@ -44,21 +44,27 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Login({ loaderData }: Route.ComponentProps) {
   const { error, next } = loaderData;
+
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-12 bg-white dark:bg-gray-950">
-      <div className="w-full max-w-sm space-y-6 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8">
-        <div className="space-y-1 text-center">
-          <h1 className="text-4xl font-light tracking-tight">fabrique</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Sign in to continue.
+    <main className="flex min-h-screen items-center justify-center px-4 py-12 text-foreground">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-panel">
+        <div className="border-b border-border bg-panel px-8 py-7 text-panel-foreground">
+          <p className="font-display-label text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+            private workshop
+          </p>
+          <h1 className="mt-3 font-brand text-5xl font-light tracking-tight">
+            fabrique
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Sign in to continue shaping pages from brief to preview.
           </p>
         </div>
-        <form method="post" className="space-y-4">
+        <form method="post" className="space-y-5 p-8">
           <input type="hidden" name="next" value={next} />
-          <div className="space-y-1">
+          <div className="space-y-2">
             <label
               htmlFor="password"
-              className="block text-xs uppercase tracking-wider font-medium text-gray-500 dark:text-gray-400"
+              className="font-display-label block text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground"
             >
               Password
             </label>
@@ -68,15 +74,18 @@ export default function Login({ loaderData }: Route.ComponentProps) {
               type="password"
               required
               autoFocus
-              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400"
+              placeholder="Enter the workshop password"
+              className="w-full rounded-lg border border-input bg-input-background px-4 py-3 text-base text-foreground shadow-soft placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/35"
             />
           </div>
           {error ? (
-            <p className="text-sm text-red-600">Wrong password.</p>
+            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              Wrong password.
+            </p>
           ) : null}
           <button
             type="submit"
-            className="w-full rounded-md bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 font-medium disabled:opacity-50"
+            className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
           >
             Sign in
           </button>

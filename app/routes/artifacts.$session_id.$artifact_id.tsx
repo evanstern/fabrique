@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Route } from "./+types/artifacts.$session_id.$artifact_id";
-import { getSession } from "../lib/sessions.server";
-import { requireAuth } from "../lib/auth.server";
+import { getSession } from "@sessions";
+import { requireAuth } from "@auth";
 
 function artifactsDir(): string {
   return process.env.ARTIFACTS_DIR ?? "./artifacts";

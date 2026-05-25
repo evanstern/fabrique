@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib/preview-common.sh"
+
+preview_require_jq
+registry="$(preview_registry_path)"
+
+if [[ ! -f "${registry}" ]]; then
+  printf 'no previews registered (registry not found: %s)\n' "${registry}"
+  exit 0
+fi
+
+if [[ "$(jq 'length' "${registry}")" -eq 0 ]]; then
+  printf 'no previews registered (registry: %s)\n' "${registry}"
+  exit 0
+fi
+
+jq -r '
+  ["slug", "branch", "port", "hostname", "service", "worktree"],
+  (.[] | [.slug, .branch, (.port | tostring), .hostname, .service_name, .worktree])
+  | @tsv
+' "${registry}" | column -t -s $'\t'

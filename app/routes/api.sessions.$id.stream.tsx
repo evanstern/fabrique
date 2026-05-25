@@ -1,11 +1,11 @@
 import type { Route } from "./+types/api.sessions.$id.stream";
-import { buildSnapshot, type SessionSnapshot } from "../lib/snapshots.server";
+import { buildSnapshot, type SessionSnapshot } from "@stream";
 import {
   subscribe,
   subscribeProgress,
   type ProgressEvent,
-} from "../lib/sse-hub.server";
-import { requireAuth } from "../lib/auth.server";
+} from "@stream";
+import { requireAuth } from "@auth";
 
 const HEARTBEAT_MS = 20_000;
 const PROGRESS_THROTTLE_MS = 150;

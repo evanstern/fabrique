@@ -1,6 +1,6 @@
 import type { Route } from "./+types/api.sessions";
-import { createSession } from "../lib/sessions.server";
-import { requireAuth } from "../lib/auth.server";
+import { createSession } from "@sessions";
+import { requireAuth } from "@auth";
 
 export async function action({ request }: Route.ActionArgs) {
   requireAuth(request, { api: true });
