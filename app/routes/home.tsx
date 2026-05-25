@@ -36,7 +36,7 @@ export default function Home({ actionData }: Route.ComponentProps) {
     <main className="flex min-h-screen items-center justify-center px-5 py-8 text-foreground sm:px-6 lg:px-8">
       <div className="w-full max-w-4xl">
         <div className="mb-10 flex items-center justify-between">
-          <a href="/" className="font-serif text-2xl font-light tracking-tight">
+          <a href="/" className="font-brand text-2xl font-light tracking-tight">
             fabrique
           </a>
           <form action="/logout" method="post">
@@ -50,10 +50,10 @@ export default function Home({ actionData }: Route.ComponentProps) {
         </div>
 
         <header className="mx-auto max-w-3xl space-y-5 text-center">
-          <p className="text-xs font-medium uppercase tracking-[0.26em] text-muted-foreground">
+          <p className="font-display-label text-xs font-medium uppercase tracking-[0.26em] text-muted-foreground">
             page-making workspace
           </p>
-          <h1 className="font-serif text-5xl font-light leading-tight tracking-tight sm:text-6xl lg:text-7xl">
+          <h1 className="font-body text-5xl font-light leading-tight tracking-tight sm:text-6xl lg:text-7xl">
             What page are we making today?
           </h1>
           <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">

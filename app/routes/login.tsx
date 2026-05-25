@@ -44,14 +44,15 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Login({ loaderData }: Route.ComponentProps) {
   const { error, next } = loaderData;
+
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-12 text-foreground">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-panel">
         <div className="border-b border-border bg-panel px-8 py-7 text-panel-foreground">
-          <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+          <p className="font-display-label text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
             private workshop
           </p>
-          <h1 className="mt-3 font-serif text-5xl font-light tracking-tight">
+          <h1 className="mt-3 font-brand text-5xl font-light tracking-tight">
             fabrique
           </h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -63,7 +64,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
           <div className="space-y-2">
             <label
               htmlFor="password"
-              className="block text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground"
+              className="font-display-label block text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground"
             >
               Password
             </label>
