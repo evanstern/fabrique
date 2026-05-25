@@ -28,6 +28,15 @@ export type Session = {
   };
 };
 
+export type SessionNavigationSummary = {
+  session_id: string;
+  stage: SessionStage;
+  brief: {
+    raw_input: string;
+    summary: string;
+  };
+};
+
 /** Mongo collection name for session documents. */
 export const SESSIONS = "sessions";
 
