@@ -5,10 +5,10 @@
 - Runtime flow: authenticated web UI + API routes orchestrate a LangGraph workflow and persist session state in MongoDB.
 - Core domains:
   - Routing: `app/routes.ts`
-  - Workflow graph + interrupts: `app/lib/graph.server.ts`
-  - Session persistence (Mongo): `app/lib/sessions.server.ts`
-  - Auth guard + cookie/sign-in: `app/lib/auth.server.ts`
-  - SSE snapshot/progress streaming: `app/lib/sse-hub.server.ts`, `app/routes/api.sessions.$id.stream.tsx`
+  - Workflow graph + interrupts: `app/lib/graph/edges.ts`, `app/lib/graph/nodes/*`
+  - Session persistence (Mongo): `app/lib/sessions/*`
+  - Auth guard + cookie/sign-in: `app/lib/auth/*`
+  - SSE snapshot/progress streaming: `app/lib/stream/*`, `app/routes/api.sessions.$id.stream.tsx`
   - Artifact serving: `app/routes/artifacts.$session_id.$artifact_id.tsx`
 
 ## Local setup + validation
@@ -38,7 +38,7 @@ Optional:
 
 ## Product/workflow behavior to preserve
 - All routes are password-gated via `requireAuth` except the login flow; API routes use `requireAuth(request, { api: true })`.
-- Session lifecycle is stage-based (`briefing` → `preview_ready`/`revising` → `published`) in `sessions.server.ts`; preserve stage guards in route actions.
+- Session lifecycle is stage-based (`briefing` → `preview_ready`/`revising` → `published`) in `app/lib/sessions/types.ts`; preserve stage guards in route actions.
 - LangGraph interruptions drive user interaction:
   - clarification answers (`answer_clarification`)
   - preview review (`review_preview`)

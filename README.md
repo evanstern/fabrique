@@ -37,10 +37,12 @@ The graph itself is assembled in `app/lib/graph/edges.ts`:
 
 ```text
 ingest_brief
-  -> clarify_or_confirm_brief
-  -> generate_previews
+  -> ask_questions
+     -> ingest_brief (needs more brief detail)
+     -> generate_previews (ready)
   -> request_preview_decision
-  -> apply_revision | publish_selected_preview
+     -> ask_questions -> apply_revision -> request_preview_decision (revise)
+     -> publish_selected_preview (approve)
 ```
 
 Generated previews must be complete HTML documents with inlined CSS and JavaScript. The app does not depend on external assets, stylesheets, scripts, or remote fonts for generated artifacts.
