@@ -36,7 +36,7 @@ export function PreviewPane({
         {url ? (
           <iframe
             src={url}
-            sandbox=""
+            sandbox="allow-scripts"
             title={`preview ${targetPreviewId}`}
             className="h-full min-h-[34rem] w-full flex-1 border-none bg-card"
           />

@@ -21,7 +21,6 @@ const artifactCsp = [
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
-  "frame-ancestors 'none'",
 ].join("; ");
 
 export async function loader({ request, params }: Route.LoaderArgs) {
