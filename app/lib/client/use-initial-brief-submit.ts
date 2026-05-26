@@ -24,6 +24,7 @@ export function useInitialBriefSubmit({
   const [initialSubmitState, setInitialSubmitState] =
     useState<InitialSubmitState>({ status: "idle" });
   const submittedInitialBriefRef = useRef<string | null>(null);
+  const fetcherStartedRef = useRef(false);
 
   useEffect(() => {
     if (!shouldStartInitialBrief) return;
@@ -35,6 +36,7 @@ export function useInitialBriefSubmit({
     if (submittedInitialBriefRef.current === initialSubmitKey) return;
 
     submittedInitialBriefRef.current = initialSubmitKey;
+    fetcherStartedRef.current = false;
     setInitialSubmitState({ status: "submitting" });
     setProgress({
       node: "ingest_brief",
@@ -53,8 +55,12 @@ export function useInitialBriefSubmit({
   }, [fetcher, shouldStartInitialBrief, sessionId, setProgress]);
 
   useEffect(() => {
-    if (fetcher.state !== "idle") return;
+    if (fetcher.state !== "idle") {
+      fetcherStartedRef.current = true;
+      return;
+    }
     if (initialSubmitState.status !== "submitting") return;
+    if (!fetcherStartedRef.current) return;
 
     if (fetcher.data?.error) {
       setInitialSubmitState({ status: "error", message: fetcher.data.error });

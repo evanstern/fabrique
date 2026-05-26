@@ -17,10 +17,12 @@ export function useLiveSession({
   session,
   initialInterrupt,
   submitting,
+  preserveProgress = false,
 }: {
   session: Session;
   initialInterrupt: PendingInterrupt | null;
   submitting: boolean;
+  preserveProgress?: boolean;
 }) {
   const [live, setLive] = useState<LiveState>({
     name: displaySessionName(session),
@@ -63,10 +65,10 @@ export function useLiveSession({
   }, [session.session_id]);
 
   useEffect(() => {
-    if (!submitting) {
+    if (!submitting && !preserveProgress) {
       setProgress(null);
     }
-  }, [submitting]);
+  }, [preserveProgress, submitting]);
 
   return { live, progress, setProgress };
 }

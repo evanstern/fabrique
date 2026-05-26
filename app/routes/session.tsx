@@ -194,10 +194,12 @@ export default function SessionPage({
   const submitting = navigation.state === "submitting";
   const reviewAction = navigation.formData?.get("action");
 
+  const preserveInitialProgress = shouldStartInitialBrief;
   const { live, progress, setProgress } = useLiveSession({
     session,
     initialInterrupt,
     submitting,
+    preserveProgress: preserveInitialProgress,
   });
   const initialSubmitState = useInitialBriefSubmit({
     shouldStartInitialBrief,
@@ -209,8 +211,6 @@ export default function SessionPage({
     useCopyState();
   const { theme, toggleTheme } = useThemeMode();
 
-  const showingInitialProgress =
-    initialSubmitState.status === "submitting" && !live.interrupt;
   const previewInterrupt =
     live.stage === "preview_ready" &&
     live.interrupt &&
@@ -220,6 +220,11 @@ export default function SessionPage({
   const latestPreview = live.records.previews.at(-1) ?? null;
   const previewArtifactId = latestPreview?.artifact_id ?? null;
   const activePreviewId = previewInterrupt?.target_preview_id ?? latestPreview?.preview_id ?? null;
+  const designingFirstPreview =
+    live.stage === "designing" && latestPreview === null && !live.interrupt;
+  const showingInitialProgress =
+    (initialSubmitState.status === "submitting" || designingFirstPreview) &&
+    !live.interrupt;
   const liveSession = {
     ...session,
     name: live.name,
@@ -239,7 +244,7 @@ export default function SessionPage({
     !live.interrupt &&
     initialSubmitState.status !== "error";
   const showBriefStartRecovery =
-    waitingForBriefProcessing && initialSubmitState.status !== "submitting";
+    waitingForBriefProcessing && initialSubmitState.status === "idle";
   const fallbackQuestions =
     live.stage === "briefing" &&
     !live.interrupt &&
@@ -335,7 +340,7 @@ export default function SessionPage({
               <ChatMessage eyebrow="Fabrique" tone="warning" square>
                 <ClarificationSkeleton
                   progress={progress}
-                  title="Starting your brief"
+                  title={designingFirstPreview ? "Designing your first preview" : "Starting your brief"}
                 />
               </ChatMessage>
             ) : null}
