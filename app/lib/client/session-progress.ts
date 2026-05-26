@@ -13,6 +13,8 @@ export function phaseLabel(phase: string | null): string {
       return "I’m naming this session so it is easier to recognize later.";
     case "checking_readiness":
       return "I’m checking whether there is enough detail to start designing.";
+    case "designing_preview":
+      return "I’m turning the brief into a first page design.";
     case "checking_revision_readiness":
       return "I’m checking whether the revision request has enough detail to update the preview.";
     case "loading_current_preview":

@@ -12,6 +12,7 @@ import { PreviewSchema, type Preview } from "@schemas/llm";
 import { appendPreviewArtifact, getSession, transitionStage } from "@sessions";
 import { GENERATE_PREVIEWS_SYSTEM } from "../prompts";
 import { artifactsDir } from "../runtime/artifacts-dir";
+import { withProgress } from "../runtime/progress";
 import type { GraphNode } from "../state";
 
 /** Generate and persist the first preview HTML artifact for a session. */
@@ -32,19 +33,25 @@ export const generatePreviews: GraphNode = async (state) => {
     maxTokens: 16000,
   }).withStructuredOutput(PreviewSchema);
 
-  const preview = (await llm.invoke([
-    { role: "system", content: GENERATE_PREVIEWS_SYSTEM },
-    {
-      role: "user",
-      content: [
-        `Brief to realize as a page:`,
-        ``,
-        `summary: ${state.summary}`,
-        `goals: ${JSON.stringify(state.goals)}`,
-        `constraints: ${JSON.stringify(state.constraints)}`,
-      ].join("\n"),
-    },
-  ])) as Preview;
+  const preview = (await withProgress(
+    state.session_id,
+    "generate_previews",
+    "designing_preview",
+    () =>
+      llm.invoke([
+        { role: "system", content: GENERATE_PREVIEWS_SYSTEM },
+        {
+          role: "user",
+          content: [
+            `Brief to realize as a page:`,
+            ``,
+            `summary: ${state.summary}`,
+            `goals: ${JSON.stringify(state.goals)}`,
+            `constraints: ${JSON.stringify(state.constraints)}`,
+          ].join("\n"),
+        },
+      ]),
+  )) as Preview;
 
   const session = await getSession(state.session_id);
   if (!session) {

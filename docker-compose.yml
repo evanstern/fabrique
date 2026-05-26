@@ -10,6 +10,7 @@ services:
     environment:
       NODE_ENV: production
       MONGO_URL: ${MONGO_URL:?MONGO_URL is required (see .env.example)}
+      MONGO_DB: ${MONGO_DB:?MONGO_DB is required (see .env.example)}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is required (see .env.example)}
       FABRIQUE_PASSWORD: ${FABRIQUE_PASSWORD:?FABRIQUE_PASSWORD is required (see .env.example)}
       FABRIQUE_AUTH_SECRET: ${FABRIQUE_AUTH_SECRET:?FABRIQUE_AUTH_SECRET is required (see .env.example)}
