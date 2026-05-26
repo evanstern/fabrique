@@ -21,6 +21,7 @@ const artifactCsp = [
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
+  "frame-ancestors 'self'",
 ].join("; ");
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -56,6 +57,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Content-Security-Policy": artifactCsp,
+      "X-Frame-Options": "SAMEORIGIN",
     },
   });
 }
